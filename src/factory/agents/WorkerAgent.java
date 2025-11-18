@@ -30,13 +30,9 @@ public class WorkerAgent extends BaseAgent{
     @Override
     protected void processNextState() {
         switch (state) {
-            case IDLE:
-                state = AgentState.WORKING;
-                break;
-
             case ON_BREAK:
-                //if (random.nextInt(100) < 20 + 20*breaksSinceShift){
-                if (true){
+                if (random.nextInt(100) < 20 + 20*breaksSinceShift){
+                //if (true){
 
                     state = AgentState.WORKING;
                     breaksSinceShift = 0;
@@ -46,15 +42,18 @@ public class WorkerAgent extends BaseAgent{
                 break;
         
             case WORKING:
-                //if (shiftsSinceBreak > 1 && random.nextInt(100) < 10 + 10*shiftsSinceBreak){
-                if (false){
+            case IDLE:
+
+            state = orderProgress > 0 ? AgentState.WORKING : AgentState.IDLE;
+            
+            if (shiftsSinceBreak > 1 && random.nextInt(100) < 3 + 3*shiftsSinceBreak){
+                //if (false){
                     state = AgentState.ON_BREAK;
                     shiftsSinceBreak = 0;
                     return;
                 }
                 shiftsSinceBreak++;
                 break;
-            
             default:
                 System.out.println("Unimplemented state " + state.toString());
                 break;
@@ -65,7 +64,7 @@ public class WorkerAgent extends BaseAgent{
     protected void performLocationBehavior() {
         switch (location) {
             case FACTORY:
-                if (state == AgentState.WORKING) {
+                if (state == AgentState.WORKING || state == AgentState.IDLE) {
                     if (currentProductOrder == null) {
                         currentProductOrder = productOrders.poll();
                         System.out.println(currentProductOrder == null ?"No orders available." : "Fetched new product order: id " + currentProductOrder.product_id+", n "+currentProductOrder.quantity);
@@ -91,15 +90,16 @@ public class WorkerAgent extends BaseAgent{
                         }
 
                         if (hasMaterial && orderProgress < currentProductOrder.quantity) {
+                            orderProgress++;
                             System.out.println("Processing order... progress=" + orderProgress + "/" + currentProductOrder.quantity);
                             sleepTime = 1000 * targetIndex;
                             System.out.println("Processed");
-                            orderProgress++;
                             hasMaterial = false;
                             break;
                         }
 
                         if (orderProgress == currentProductOrder.quantity) {
+                            orderProgress = -1;
                             warehouse.AddMaterials(targetIndex, currentProductOrder.quantity);
                             currentProductOrder = null;
                             System.out.println("Completed order. Added materials to target index " + targetIndex);
@@ -111,7 +111,7 @@ public class WorkerAgent extends BaseAgent{
                 } 
                 else if (state == AgentState.ON_BREAK) {
                     location = random.nextInt(100) > 80 ? AgentLocation.BATHROOM : AgentLocation.BREAKROOM;
-                    System.out.println("Going on break → " + location);
+                    System.out.println("Going on break to " + location);
                     sleepTime = 500;
                 }
                 break;
@@ -121,7 +121,7 @@ public class WorkerAgent extends BaseAgent{
                 if (state == AgentState.ON_BREAK) {
                     System.out.println("On break at " + location);
                     sleepTime = 2500;
-                } else if (state == AgentState.WORKING) {
+                } else if (state == AgentState.WORKING || state == AgentState.IDLE) {
                     location = AgentLocation.FACTORY;
                     System.out.println("Returning to FACTORY from " + location);
                     sleepTime = 500;

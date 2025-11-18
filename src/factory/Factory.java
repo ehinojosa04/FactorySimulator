@@ -14,8 +14,9 @@ public class Factory {
 
     public ArrayList<Stage> stages;
     public ArrayList<WorkerAgent> workerAgents;
-    public InventoryAgent inventoryAgent;
     public ArrayList<DeliveryAgent> deliveryAgents;
+    
+    public InventoryAgent inventoryAgent;
     public int nFactoryWorkers, nDeliveryWorkers;
 
     public LinkedList<ProductOrder> productOrders;

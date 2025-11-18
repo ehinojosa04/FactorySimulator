@@ -54,4 +54,8 @@ public abstract class BaseAgent extends Thread{
     public String getThreadID(){
         return threadID;
     }
+
+    public AgentType getAgentType(){
+        return type;
+    }
 }

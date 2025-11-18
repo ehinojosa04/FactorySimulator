@@ -3,13 +3,13 @@ package factory.agents;
 import java.util.concurrent.locks.ReentrantLock;
 
 import core.agents.AgentLocation;
+import core.agents.AgentState;
 import core.agents.AgentType;
 import core.agents.BaseAgent;
 import factory.warehouse.Warehouse;
 
 
-public class DeliveryAgent extends BaseAgent{
-
+public class DeliveryAgent extends BaseAgent {
     Warehouse warehouse;
     ReentrantLock lock;
 
@@ -36,9 +36,9 @@ public class DeliveryAgent extends BaseAgent{
                     return;
                 }
 
-
                 System.out.println("Going to supplier with order of "+currentOrder);
                 location = AgentLocation.SUPPLIER;
+                state = AgentState.WORKING;
                 sleepTime = 10000;
                 break;
 
@@ -47,6 +47,7 @@ public class DeliveryAgent extends BaseAgent{
                 currentOrder -= cargo;
 
                 System.out.println("Going to deliver");
+                state = AgentState.WORKING;
                 location = AgentLocation.WAREHOUSE;
                 sleepTime = 10000;
                 break;
@@ -71,6 +72,7 @@ public class DeliveryAgent extends BaseAgent{
 
     @Override
     protected void processNextState() {
+        state = cargo > 0 ? AgentState.WORKING : AgentState.IDLE;
         return;
     }
 

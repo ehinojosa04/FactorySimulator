@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 import core.agents.AgentLocation;
+import core.agents.AgentState;
 import core.agents.AgentType;
 import core.agents.BaseAgent;
 import factory.warehouse.Warehouse;
@@ -25,11 +26,7 @@ public class InventoryAgent extends BaseAgent{
     }
 
     @Override
-    protected void performLocationBehavior() {
-
-        System.out.println(warehouse.inventory.toString());
-        sleepTime = 1000;
-        
+    protected void performLocationBehavior() {        
         switch (location) {
             case WAREHOUSE:
             if (materialsPendingOfOrder > 0){
@@ -52,6 +49,7 @@ public class InventoryAgent extends BaseAgent{
     public void requestMaterials(int nMaterials){
         try {
             lock.lock();
+            Thread.sleep(1000);
             materialsPendingOfOrder += nMaterials;
         } catch (Exception e) {
 
@@ -83,6 +81,6 @@ public class InventoryAgent extends BaseAgent{
 
     @Override
     protected void processNextState() {
-        return;
+        state = materialsPendingOfOrder > 0 ? AgentState.WORKING : AgentState.IDLE; 
     }
 }
