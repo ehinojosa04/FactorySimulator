@@ -10,7 +10,7 @@ import core.ui.ZonesWindow;
 
 public class Server {
     public static void main(String[] args) {
-        Factory factory = new Factory(10, 1, 1);
+        Factory factory = new Factory(10, 5, 1);
 
         new Thread(new InventoryWindow(factory.warehouse)).start();
         

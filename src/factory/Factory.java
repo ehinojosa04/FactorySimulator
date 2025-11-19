@@ -24,14 +24,14 @@ public class Factory {
 
     public Factory(int nStages, int nFactoryWorkers, int nDeliveryWorkers) {
         warehouse = new Warehouse();
-        stages = new ArrayList<Stage>();
-        productOrders = new LinkedList<ProductOrder>();
+        stages = new ArrayList<>();
+        productOrders = new LinkedList<>();
 
         this.nFactoryWorkers = nFactoryWorkers;
-        workerAgents = new ArrayList<WorkerAgent>(nFactoryWorkers);
+        workerAgents = new ArrayList<>(nFactoryWorkers);
 
         this.nDeliveryWorkers = nDeliveryWorkers;
-        deliveryAgents = new ArrayList<DeliveryAgent>(nDeliveryWorkers);
+        deliveryAgents = new ArrayList<>(nDeliveryWorkers);
         
         for (int i = 0; i < nStages; i++) {
             stages.add(new Stage(500 + 500 * i));
