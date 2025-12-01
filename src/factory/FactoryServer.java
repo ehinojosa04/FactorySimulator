@@ -1,5 +1,6 @@
 package factory;
 
+import java.net.ServerSocket;
 import java.util.ArrayList;
 
 import core.agents.BaseAgent;
@@ -8,12 +9,11 @@ import core.ui.InventoryWindow;
 import core.ui.ThreadStatesWindow;
 import core.ui.ZonesWindow;
 
-public class Server {
-    public static void main(String[] args) {
-        Factory factory = new Factory(10, 5, 1);
-
+public class FactoryServer {
+    public FactoryServer(int stages, int workers, int delivery) {
+        Factory factory = new Factory(stages, workers, delivery);
         new Thread(new InventoryWindow(factory.warehouse)).start();
-        
+
         ArrayList<BaseAgent> agents = new ArrayList<>();
         agents.add(factory.manager);
         agents.add(factory.inventoryAgent);

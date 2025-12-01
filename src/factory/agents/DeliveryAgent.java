@@ -53,7 +53,7 @@ public class DeliveryAgent extends BaseAgent {
                 break;
 
             case WAREHOUSE:
-                warehouse.inventory.set(0, warehouse.inventory.get(0) + cargo);
+                warehouse.inventory.set(0, warehouse.inventory.getFirst() + cargo);
                 System.out.println("Delivered " + cargo + " items to warehouse");
                 cargo = 0;
                 

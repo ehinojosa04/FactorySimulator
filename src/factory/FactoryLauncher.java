@@ -2,13 +2,6 @@ package factory;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-
-import core.agents.BaseAgent;
-import core.ui.AgentStatesWindow;
-import core.ui.InventoryWindow;
-import core.ui.ThreadStatesWindow;
-import core.ui.ZonesWindow;
 
 public class FactoryLauncher {
     public static void main(String[] args) {
@@ -58,7 +51,7 @@ public class FactoryLauncher {
                     int workers = Integer.parseInt(workersTF.getText());
                     int delivery = Integer.parseInt(deliveryTF.getText());
 
-                    startSimulation(stages, workers, delivery);
+                    new FactoryServer(stages, workers, delivery);
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(frame, "Please enter valid integers.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -78,23 +71,5 @@ public class FactoryLauncher {
         panel.add(textField);
         panel.add(Box.createVerticalStrut(5));
         return textField;
-    }
-
-    private static void startSimulation(int stages, int workers, int delivery) {
-        Factory factory = new Factory(stages, workers, delivery);
-
-        new Thread(new InventoryWindow(factory.warehouse)).start();
-
-        ArrayList<BaseAgent> agents = new ArrayList<>();
-        agents.add(factory.manager);
-        agents.add(factory.inventoryAgent);
-        agents.addAll(factory.workerAgents);
-        agents.addAll(factory.deliveryAgents);
-
-        new Thread(new AgentStatesWindow(agents)).start();
-        new Thread(new ThreadStatesWindow(agents)).start();
-        new Thread(new ZonesWindow(agents)).start();
-
-        System.out.println("Factory simulation started with: " + stages + ", " + workers + ", " + delivery);
     }
 }
