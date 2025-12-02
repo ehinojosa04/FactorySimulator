@@ -3,17 +3,22 @@ package factory.agents;
 import factory.Factory;
 import factory.production.ProductOrder;
 
+import java.io.IOException;
+
+import Facility.Bathroom;
 import core.agents.AgentLocation;
 import core.agents.AgentType;
 import core.agents.BaseAgent;
 
 public class ManagerAgent extends BaseAgent{
     Factory factory;
+    Bathroom bathroom;
     int orderBatchSize = 10;
 
     public ManagerAgent(Factory factory) {
         super(AgentType.MANAGER, "Manager", AgentLocation.FACTORY);
         this.factory = factory;
+        this.bathroom = new Bathroom();
     }
 
     public void planProduction(){
@@ -33,7 +38,20 @@ public class ManagerAgent extends BaseAgent{
         factory.inventoryAgent = new InventoryAgent("InventoryAgent", AgentLocation.WAREHOUSE, factory.warehouse, factory.deliveryAgents);
 
         for (int i = 0; i < factory.nFactoryWorkers; i++) {
-            factory.workerAgents.add(new WorkerAgent("Worker-"+i, AgentLocation.FACTORY, factory.warehouse, factory.productOrders, factory.inventoryAgent));
+            try {
+                factory.workerAgents.add(new WorkerAgent(
+                    "Worker-"+i,
+                    AgentLocation.FACTORY,
+                    factory.warehouse,
+                    factory.productOrders,
+                    factory.inventoryAgent,
+                    "localhost",
+                    5000
+                ));
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
         }
 
         System.out.println("Hired "+factory.workerAgents.size()+" factory workers");

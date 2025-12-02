@@ -1,25 +1,22 @@
 package Facility;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.io.IOException;
 
-public class FacilityServer {
-    public static void main(String[] args) throws Exception {
-        ServerSocket serverSocket = new ServerSocket(5050);
-        Socket clientSocket = serverSocket.accept();
+public abstract class FacilityServer {
+    protected final Facility facility;
+    protected final FacilityType facilityType;
+    protected final int port;
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-
-        String message = in.readLine();
-        System.out.println("Server received a message: " + message);
-
-        out.println(message);
-
-        clientSocket.close();
-        serverSocket.close();
+    public FacilityServer(FacilityType facilityType, int port) {
+        this.port = port;
+        this.facilityType = facilityType;
+        
+        if (facilityType == FacilityType.BATHROOM) {
+            facility = new Bathroom();
+        } else {
+            facility = new BreakRoom();
+        }
     }
+
+    public abstract void start() throws IOException;
 }

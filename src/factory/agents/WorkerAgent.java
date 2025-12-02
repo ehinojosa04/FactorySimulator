@@ -1,5 +1,6 @@
 package factory.agents;
 
+import java.io.IOException;
 import java.util.LinkedList;
 
 import core.agents.AgentLocation;
@@ -9,45 +10,79 @@ import core.agents.BaseAgent;
 import factory.production.ProductOrder;
 import factory.warehouse.Warehouse;
 
-public class WorkerAgent extends BaseAgent{
+public class WorkerAgent extends BaseAgent {
     LinkedList<ProductOrder> productOrders;
     ProductOrder currentProductOrder;
     Warehouse warehouse;
     InventoryAgent inventoryAgent;
 
+    private final BathroomConnection bathroomConnection;
+    private volatile boolean bathroomRequestInProgress = false;
+
     int orderProgress, sourceIndex, targetIndex, materialsNeeded, shiftsNeeded;
     boolean hasMaterial;
 
-    public WorkerAgent(String threadID, AgentLocation location, Warehouse warehouse, LinkedList<ProductOrder> productOrders, InventoryAgent inventoryAgent) {
+    public WorkerAgent(
+            String threadID,
+            AgentLocation location,
+            Warehouse warehouse,
+            LinkedList<ProductOrder> productOrders,
+            InventoryAgent inventoryAgent,
+            String bathroomHost,
+            int bathroomPort) throws IOException {
         super(AgentType.WORKER, threadID, location);
         this.productOrders = productOrders;
         this.warehouse = warehouse;
         this.orderProgress = -1;
         this.hasMaterial = false;
         this.inventoryAgent = inventoryAgent;
+
+        this.bathroomConnection = new BathroomConnection(bathroomHost, bathroomPort, this);
+    }
+
+    public void updateStateFromServer(AgentState newState) {
+        this.state = newState;
+        // debug:
+        System.out.println("[" + threadID + "] State from bathroom server: " + newState);
+    }
+
+    public void updateLocationFromServer(AgentLocation newLocation) {
+        this.location = newLocation;
+        System.out.println("[" + threadID + "] Location from bathroom server: " + newLocation);
+
+        if (this.location == AgentLocation.FACTORY) {
+            try {
+                this.bathroomConnection.close();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void handleBathroomEventFromServer(String eventType) {
+        System.out.println("[" + threadID + "] Bathroom event: " + eventType);
+        if ("EXITED_BUFFER".equals(eventType)) {
+            // bathroom server has finished the whole pipeline for this request
+            bathroomRequestInProgress = false;
+            System.out.println("[" + threadID + "] Finished bathroom break, back to work.");
+        }
     }
 
     @Override
     protected void processNextState() {
         switch (state) {
+            case WAITING:
+            case MOVING:
             case ON_BREAK:
-                if (random.nextInt(100) < 20 + 20*breaksSinceShift){
-                //if (true){
-
-                    state = AgentState.WORKING;
-                    breaksSinceShift = 0;
-                    return;
-                }
-                breaksSinceShift++;
+                // While on break, state is controlled by bathroom server.
+                // Do not modify it here.
                 break;
-        
             case WORKING:
             case IDLE:
+                state = orderProgress > 0 ? AgentState.WORKING : AgentState.IDLE;
 
-            state = orderProgress > 0 ? AgentState.WORKING : AgentState.IDLE;
-            
-            if (shiftsSinceBreak > 1 && random.nextInt(100) < 3 + 3*shiftsSinceBreak){
-                //if (false){
+                if (shiftsSinceBreak > 1 && random.nextInt(100) < 3 + 3 * shiftsSinceBreak) {
                     state = AgentState.ON_BREAK;
                     shiftsSinceBreak = 0;
                     return;
@@ -67,9 +102,11 @@ public class WorkerAgent extends BaseAgent{
                 if (state == AgentState.WORKING || state == AgentState.IDLE) {
                     if (currentProductOrder == null) {
                         currentProductOrder = productOrders.poll();
-                        System.out.println(currentProductOrder == null ?"No orders available." : "Fetched new product order: id " + currentProductOrder.product_id+", n "+currentProductOrder.quantity);
+                        System.out.println(currentProductOrder == null ? "No orders available."
+                                : "Fetched new product order: id " + currentProductOrder.product_id + ", n "
+                                        + currentProductOrder.quantity);
                     }
-                    
+
                     if (currentProductOrder != null) {
                         if (orderProgress == -1) {
                             sourceIndex = currentProductOrder.getSourceMaterialIndex();
@@ -77,7 +114,8 @@ public class WorkerAgent extends BaseAgent{
 
                             materialsNeeded = currentProductOrder.getRequiredMaterials(targetIndex);
                             orderProgress++;
-                            System.out.println("Starting new order: source=" + sourceIndex + ", target=" + targetIndex + ", materials=" + materialsNeeded);
+                            System.out.println("Starting new order: source=" + sourceIndex + ", target=" + targetIndex
+                                    + ", materials=" + materialsNeeded);
                             inventoryAgent.requestMaterials(materialsNeeded);
                         }
 
@@ -91,7 +129,8 @@ public class WorkerAgent extends BaseAgent{
 
                         if (hasMaterial && orderProgress < currentProductOrder.quantity) {
                             orderProgress++;
-                            System.out.println("Processing order... progress=" + orderProgress + "/" + currentProductOrder.quantity);
+                            System.out.println("Processing order... progress=" + orderProgress + "/"
+                                    + currentProductOrder.quantity);
                             sleepTime = 1000 * targetIndex;
                             System.out.println("Processed");
                             hasMaterial = false;
@@ -108,23 +147,22 @@ public class WorkerAgent extends BaseAgent{
                     } else {
                         sleepTime = 1000;
                     }
-                } 
-                else if (state == AgentState.ON_BREAK) {
-                    location = random.nextInt(100) > 80 ? AgentLocation.BATHROOM : AgentLocation.BREAKROOM;
-                    System.out.println("Going on break to " + location);
-                    sleepTime = 500;
+                } else if (state == AgentState.ON_BREAK) {
+                    if (!bathroomRequestInProgress) {
+                        bathroomRequestInProgress = true;
+                        System.out.println("[" + threadID + "] Requesting bathroom break through server...");
+                        bathroomConnection.requestBathroomBreak();
+                    }
+                    sleepTime = 200;
                 }
                 break;
-
             case BATHROOM:
             case BREAKROOM:
                 if (state == AgentState.ON_BREAK) {
-                    System.out.println("On break at " + location);
-                    sleepTime = 2500;
+                    System.out.println("[" + threadID + "] On break at " + location);
+                    sleepTime = 250;
                 } else if (state == AgentState.WORKING || state == AgentState.IDLE) {
-                    location = AgentLocation.FACTORY;
-                    System.out.println("Returning to FACTORY from " + location);
-                    sleepTime = 500;
+                    sleepTime = 200;
                 }
                 break;
 
@@ -134,5 +172,4 @@ public class WorkerAgent extends BaseAgent{
                 break;
         }
     }
-
 }

@@ -43,12 +43,21 @@ public abstract class BaseAgent extends Thread{
 
     protected abstract void processNextState();
 
+    
     public AgentLocation getLocation(){
         return location;
     }
 
+    public void setAgentLocation(AgentLocation location) {
+        this.location = location;
+    }
+    
     public AgentState getAgentState(){
         return state;
+    }
+
+    public void setAgentState(AgentState state) {
+        this.state = state;
     }
 
     public String getThreadID(){
