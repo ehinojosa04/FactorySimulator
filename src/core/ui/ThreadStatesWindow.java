@@ -7,7 +7,6 @@ import java.util.*;
 import core.agents.BaseAgent;
 
 public class ThreadStatesWindow extends JFrame implements Runnable {
-
     private final ArrayList<BaseAgent> agents;
     private final DefaultTableModel tableModel;
     private volatile boolean running = true;

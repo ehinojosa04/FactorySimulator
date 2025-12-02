@@ -1,6 +1,5 @@
 package factory.agents;
 
-import java.io.IOException;
 import java.util.LinkedList;
 
 import core.agents.AgentLocation;
@@ -27,9 +26,7 @@ public class WorkerAgent extends BaseAgent {
             AgentLocation location,
             Warehouse warehouse,
             LinkedList<ProductOrder> productOrders,
-            InventoryAgent inventoryAgent,
-            String bathroomHost,
-            int bathroomPort) throws IOException {
+            InventoryAgent inventoryAgent) {
         super(AgentType.WORKER, threadID, location);
         this.productOrders = productOrders;
         this.warehouse = warehouse;
@@ -37,7 +34,7 @@ public class WorkerAgent extends BaseAgent {
         this.hasMaterial = false;
         this.inventoryAgent = inventoryAgent;
 
-        this.bathroomConnection = new BathroomConnection(bathroomHost, bathroomPort, this);
+        this.bathroomConnection = new BathroomConnection("localhost", 5000, this);
     }
 
     public void updateStateFromServer(AgentState newState) {
@@ -50,13 +47,10 @@ public class WorkerAgent extends BaseAgent {
         this.location = newLocation;
         System.out.println("[" + threadID + "] Location from bathroom server: " + newLocation);
 
+        // When we are back at the factory, we can close the bathroom connection.
         if (this.location == AgentLocation.FACTORY) {
-            try {
-                this.bathroomConnection.close();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+            // The connection is lazy, so this will be a no-op if it was never opened.
+            bathroomConnection.close();
         }
     }
 
@@ -151,11 +145,12 @@ public class WorkerAgent extends BaseAgent {
                     if (!bathroomRequestInProgress) {
                         bathroomRequestInProgress = true;
                         System.out.println("[" + threadID + "] Requesting bathroom break through server...");
-                        bathroomConnection.requestBathroomBreak();
+                        bathroomConnection.requestBathroomBreak(); // connection opens here if needed
                     }
                     sleepTime = 200;
                 }
                 break;
+
             case BATHROOM:
             case BREAKROOM:
                 if (state == AgentState.ON_BREAK) {

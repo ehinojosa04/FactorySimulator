@@ -5,11 +5,12 @@ import core.agents.AgentState;
 
 public class Bathroom extends Facility {
     public Bathroom() {
-        super(1);
+        super(5);
     }
 
     @Override
     protected void onEnter(String agentId, ClientChannel channel) throws InterruptedException {
+        channel.sendLocation(agentId, AgentLocation.BATHROOM);
         channel.sendState(agentId, AgentState.MOVING);
         Thread.sleep(1000);
     }
