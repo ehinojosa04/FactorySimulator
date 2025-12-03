@@ -9,19 +9,20 @@ import factory.warehouse.Warehouse;
 public class DeliveryAgent extends BaseAgent {
 
     private final Warehouse warehouse;
-    private final int MAX_CAPACITY = 10;
 
+    private int maxCapacity;
     private int currentOrderTotal;
     private int cargo;
     private AgentLocation targetLocation;
 
-    public DeliveryAgent(String threadID, AgentLocation location, Warehouse warehouse) {
+    public DeliveryAgent(String threadID, AgentLocation location, Warehouse warehouse, int maxCapacity) {
         super(AgentType.DELIVERY, threadID, location);
         this.warehouse = warehouse;
         this.cargo = 0;
         this.currentOrderTotal = 0;
         this.targetLocation = location;
         this.state = AgentState.WAITING;
+        this.maxCapacity = maxCapacity;
     }
 
     public synchronized void setOrder(int order) {
@@ -77,12 +78,12 @@ public class DeliveryAgent extends BaseAgent {
 
             case WORKING:
                 if (location == AgentLocation.SUPPLIER) {
-                    if (cargo < MAX_CAPACITY && currentOrderTotal > 0) {
+                    if (cargo < maxCapacity && currentOrderTotal > 0) {
 
                         cargo++;
                         currentOrderTotal--;
 
-                        stateDescriptor = "Loading from Supplier (" + cargo + "/" + MAX_CAPACITY + ")";
+                        stateDescriptor = "Loading from Supplier (" + cargo + "/" + maxCapacity + ")";
                         System.out.println(threadID + ": Loading item... (Cargo: " + cargo + ")");
 
                         sleepTime = 500;
