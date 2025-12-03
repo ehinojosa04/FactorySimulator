@@ -48,8 +48,8 @@ public class WorkerAgent extends BaseAgent {
         this.targetLocation = location;
         this.holdingWorkstation = false;
 
-        this.bathroomConnection = new BathroomConnection("localhost", 5000, this);
-        this.breakroomConnection = new BreakroomConnection("localhost", 5001, this);
+        this.bathroomConnection = new BathroomConnection("10.7.1.249", 5000, this);
+        this.breakroomConnection = new BreakroomConnection("10.7.1.249", 5001, this);
     }
 
     public void updateStateFromServer(AgentState newState) {
