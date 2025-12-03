@@ -2,6 +2,7 @@ package factory;
 
 import java.util.ArrayList;
 
+import core.Zones.ZonesAPI;
 import core.agents.BaseAgent;
 import core.ui.AgentStatesWindow;
 import core.ui.InventoryWindow;
@@ -9,8 +10,9 @@ import core.ui.ThreadStatesWindow;
 import core.ui.ZonesWindow;
 
 public class FactoryServer {
-    public FactoryServer(int stages, int workers, int delivery) {
-        Factory factory = new Factory(stages, workers, delivery);
+    public FactoryServer(int workstations, int orderBatchSize, int productsOffered, int workers, int truckMaxCapacity, int delivery) {
+        ZonesAPI zones = new ZonesAPI();
+        Factory factory = new Factory(workstations, orderBatchSize, productsOffered, workers,truckMaxCapacity, delivery, zones);
         new Thread(new InventoryWindow(factory.warehouse)).start();
 
         ArrayList<BaseAgent> agents = new ArrayList<>();

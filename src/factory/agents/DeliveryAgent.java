@@ -1,68 +1,59 @@
 package factory.agents;
 
-import java.util.concurrent.locks.ReentrantLock;
-
 import core.agents.AgentLocation;
 import core.agents.AgentState;
 import core.agents.AgentType;
 import core.agents.BaseAgent;
 import factory.warehouse.Warehouse;
 
-
 public class DeliveryAgent extends BaseAgent {
-    Warehouse warehouse;
-    ReentrantLock lock;
 
-    int cargo;
-    int currentOrder;
-    int MAX_CAPACITY = 10;
+    private final Warehouse warehouse;
+    private final int MAX_CAPACITY = 10;
+
+    private int currentOrderTotal;
+    private int cargo;
+    private AgentLocation targetLocation;
 
     public DeliveryAgent(String threadID, AgentLocation location, Warehouse warehouse) {
         super(AgentType.DELIVERY, threadID, location);
         this.warehouse = warehouse;
         this.cargo = 0;
-        this.currentOrder = 0;
-        this.lock = new ReentrantLock();
+        this.currentOrderTotal = 0;
+        this.targetLocation = location;
+        this.state = AgentState.WAITING;
+    }
+
+    public synchronized void setOrder(int order) {
+        if (order > 0) {
+            this.currentOrderTotal = order;
+            System.out.println(threadID + ": Received order for " + order + " units.");
+        }
+    }
+
+    public synchronized int getCurrentOrder() {
+        return currentOrderTotal;
     }
 
     @Override
-    protected void performLocationBehavior() {
-        switch (location) {
-            case LOADING_DECK:
-                try {
-                    waitForOrders();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    return;
+    protected void processNextState() {
+        switch (state) {
+            case WAITING:
+                // Trigger: If we are parked and get an order, go.
+                if (location == AgentLocation.LOADING_DECK && currentOrderTotal > 0) {
+                    System.out.println(threadID + ": Heading to Supplier.");
+                    startMovingTo(AgentLocation.SUPPLIER);
                 }
-
-                System.out.println("Going to supplier with order of "+currentOrder);
-                location = AgentLocation.SUPPLIER;
-                state = AgentState.WORKING;
-                sleepTime = 10000;
                 break;
 
-            case SUPPLIER:
-                cargo = Math.min(MAX_CAPACITY, currentOrder);
-                currentOrder -= cargo;
-
-                System.out.println("Going to deliver");
-                state = AgentState.WORKING;
-                location = AgentLocation.WAREHOUSE;
-                sleepTime = 10000;
+            case MOVING:
+                if (location == targetLocation) {
+                    arriveAtDestination();
+                }
                 break;
 
-            case WAREHOUSE:
-                warehouse.inventory.set(0, warehouse.inventory.getFirst() + cargo);
-                System.out.println("Delivered " + cargo + " items to warehouse");
-                cargo = 0;
-                
-                if (currentOrder > 0) {
-                    location = AgentLocation.SUPPLIER;
-                } else {
-                    location = AgentLocation.LOADING_DECK;
-                }
-                sleepTime = 100;
+            case WORKING:
+                // Transitions handled in performLocationBehavior
                 break;
 
             default:
@@ -71,27 +62,90 @@ public class DeliveryAgent extends BaseAgent {
     }
 
     @Override
-    protected void processNextState() {
-        state = cargo > 0 ? AgentState.WORKING : AgentState.IDLE;
-        return;
-    }
+    protected void performLocationBehavior() {
+        switch (state) {
+            case WAITING:
+                stateDescriptor = "Parked at Loading Deck (Ready)";
+                sleepTime = 500;
+                break;
 
-    public synchronized int getCurrentOrder() {
-        return currentOrder;
-    }
+            case MOVING:
+                stateDescriptor = "Driving to " + targetLocation + " Cargo: " + cargo;
+                sleepTime = 5000;
+                location = targetLocation;
+                break;
 
+            case WORKING:
+                if (location == AgentLocation.SUPPLIER) {
+                    if (cargo < MAX_CAPACITY && currentOrderTotal > 0) {
 
-    public synchronized void waitForOrders() throws InterruptedException {
-        while (currentOrder == 0) {
-            wait();
+                        cargo++;
+                        currentOrderTotal--;
+
+                        stateDescriptor = "Loading from Supplier (" + cargo + "/" + MAX_CAPACITY + ")";
+                        System.out.println(threadID + ": Loading item... (Cargo: " + cargo + ")");
+
+                        sleepTime = 500;
+
+                    } else {
+                        // --- LOADING COMPLETE ---
+                        stateDescriptor = "Loading complete. Securing cargo.";
+                        System.out.println(threadID + ": Truck full or Order filled. Heading to Warehouse.");
+                        startMovingTo(AgentLocation.WAREHOUSE);
+                    }
+
+                } else if (location == AgentLocation.WAREHOUSE) {
+                    if (cargo > 0) {
+                        stateDescriptor = "Unloading cargo (" + cargo + " items remaining)";
+
+                        cargo--;
+                        warehouse.AddMaterials(0, 1);
+
+                        System.out.println(threadID + ": Unloading... (" + cargo + " left on truck)");
+                        sleepTime = 500; // Time to carry box to shelf
+
+                    } else {
+                        // --- UNLOADING COMPLETE ---
+                        stateDescriptor = "Unloading complete. Checking manifest...";
+                        System.out.println(threadID + ": Unloading complete.");
+
+                        if (currentOrderTotal > 0) {
+                            System.out.println(threadID + ": Order incomplete. Returning to Supplier.");
+                            startMovingTo(AgentLocation.SUPPLIER);
+                        } else {
+                            System.out.println(threadID + ": Job done. Parking at Loading Deck.");
+                            startMovingTo(AgentLocation.LOADING_DECK);
+                        }
+                    }
+                }
+                // SAFETY CATCH
+                else {
+                    state = AgentState.IDLE;
+                }
+                break;
+
+            default:
+                stateDescriptor = "Idle";
+                sleepTime = 500;
+                break;
         }
     }
 
-    public synchronized void setOrder(int order) {
-        if (order <= 0) {
-            throw new IllegalArgumentException("Order must be positive");
+    // --- Helpers ---
+
+    private void startMovingTo(AgentLocation destination) {
+        this.targetLocation = destination;
+        this.state = AgentState.MOVING;
+        stateDescriptor = "Starting engine: Destination " + destination;
+    }
+
+    private void arriveAtDestination() {
+        // BUG FIX: Always park (WAITING) when arriving at Loading Deck.
+        // This ensures the processNextState logic triggers cleanly to restart the loop if needed.
+        if (location == AgentLocation.LOADING_DECK) {
+            state = AgentState.WAITING;
+        } else {
+            state = AgentState.WORKING;
         }
-        currentOrder = order;
-        notifyAll();
     }
 }

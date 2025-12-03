@@ -1,7 +1,7 @@
 package factory.agents;
 
 import java.util.LinkedList;
-
+import core.Zones.ZonesAPI;
 import core.agents.AgentLocation;
 import core.agents.AgentState;
 import core.agents.AgentType;
@@ -9,30 +9,33 @@ import core.agents.BaseAgent;
 import factory.production.ProductOrder;
 import factory.warehouse.Warehouse;
 
-public class WorkerAgent extends BaseAgent {
-    LinkedList<ProductOrder> productOrders;
-    ProductOrder currentProductOrder;
-    Warehouse warehouse;
-    InventoryAgent inventoryAgent;
+public class WorkerAgent extends BaseAgent  {
+
+    private final LinkedList<ProductOrder> productOrders;
+    private final Warehouse warehouse;
+    private final InventoryAgent inventoryAgent;
 
     private final BathroomConnection bathroomConnection;
     private volatile boolean bathroomRequestInProgress = false;
+    private final ZonesAPI zones;
 
-    int orderProgress, sourceIndex, targetIndex, materialsNeeded, shiftsNeeded;
-    boolean hasMaterial;
+    private ProductOrder currentProductOrder;
+    private int orderProgress = 0;
 
-    public WorkerAgent(
-            String threadID,
-            AgentLocation location,
-            Warehouse warehouse,
-            LinkedList<ProductOrder> productOrders,
-            InventoryAgent inventoryAgent) {
+    private int materialsCarried = 0;
+    private int totalMaterialsNeeded = 0;
+
+    private AgentLocation targetLocation;
+    private boolean holdingWorkstation;
+
+    public WorkerAgent(String threadID, AgentLocation location, Warehouse warehouse, LinkedList<ProductOrder> productOrders, InventoryAgent inventoryAgent, ZonesAPI zones) {
         super(AgentType.WORKER, threadID, location);
         this.productOrders = productOrders;
         this.warehouse = warehouse;
-        this.orderProgress = -1;
-        this.hasMaterial = false;
         this.inventoryAgent = inventoryAgent;
+        this.zones = zones;
+        this.targetLocation = location;
+        this.holdingWorkstation = false;
 
         this.bathroomConnection = new BathroomConnection("localhost", 5000, this);
     }
@@ -66,79 +69,95 @@ public class WorkerAgent extends BaseAgent {
     @Override
     protected void processNextState() {
         switch (state) {
-            case WAITING:
-            case MOVING:
-            case ON_BREAK:
-                // While on break, state is controlled by bathroom server.
-                // Do not modify it here.
-                break;
-            case WORKING:
             case IDLE:
-                state = orderProgress > 0 ? AgentState.WORKING : AgentState.IDLE;
+                if (location == AgentLocation.FACTORY) {
+                    if (currentProductOrder == null) {
+                        currentProductOrder = productOrders.poll();
+                    }
 
-                if (shiftsSinceBreak > 1 && random.nextInt(100) < 3 + 3 * shiftsSinceBreak) {
-                    state = AgentState.ON_BREAK;
-                    shiftsSinceBreak = 0;
+                    if (currentProductOrder != null) {
+                        System.out.println(threadID + ": Received order. Calculating needs...");
+
+                        this.totalMaterialsNeeded = currentProductOrder.quantity;
+                        this.materialsCarried = 0;
+
+                        System.out.println(threadID + ": Requesting " + totalMaterialsNeeded + " materials from Inventory.");
+                        inventoryAgent.requestMaterials(totalMaterialsNeeded);
+
+                        startMovingTo(AgentLocation.WAREHOUSE);
+                    }
+                }
+                break;
+
+            case MOVING:
+                if (location == targetLocation) {
+                    arriveAtDestination();
+                }
+                break;
+
+            case WAITING:
+                // We are at the Warehouse. Do we have everything?
+                if (location == AgentLocation.WAREHOUSE && currentProductOrder != null) {
+
+                    if (materialsCarried >= totalMaterialsNeeded) {
+                        // Success! We have everything.
+                        System.out.println(threadID + ": Collected all " + materialsCarried + " items. Returning to Factory.");
+                        startMovingTo(AgentLocation.FACTORY);
+                    }
+                    // If we don't have enough, we stay in WAITING state.
+                    // The actual picking happens in performLocationBehavior below.
+                }
+                break;
+        
+            case WORKING:
+                if (shouldTakeBreak()) {
+                    System.out.println(threadID + ": Needs a break. Heading to Breakroom.");
+                    startMovingTo(AgentLocation.BREAKROOM);
                     return;
                 }
-                shiftsSinceBreak++;
+
+                if (orderProgress >= currentProductOrder.quantity) {
+                    completeOrder();
+                }
                 break;
-            default:
-                System.out.println("Unimplemented state " + state.toString());
+
+            case ON_BREAK:
+                if (shouldEndBreak()) {
+                    System.out.println(threadID + ": Break over. Returning to Factory.");
+                    startMovingTo(AgentLocation.FACTORY);
+                }
                 break;
         }
     }
 
     @Override
     protected void performLocationBehavior() {
-        switch (location) {
-            case FACTORY:
-                if (state == AgentState.WORKING || state == AgentState.IDLE) {
-                    if (currentProductOrder == null) {
-                        currentProductOrder = productOrders.poll();
-                        System.out.println(currentProductOrder == null ? "No orders available."
-                                : "Fetched new product order: id " + currentProductOrder.product_id + ", n "
-                                        + currentProductOrder.quantity);
-                    }
+        switch (state) {
+            case MOVING:
+                stateDescriptor = "Moving to " + targetLocation;
+                sleepTime = 1000;
+                location = targetLocation;
+                break;
 
-                    if (currentProductOrder != null) {
-                        if (orderProgress == -1) {
-                            sourceIndex = currentProductOrder.getSourceMaterialIndex();
-                            targetIndex = currentProductOrder.getTargetProductIndex();
+            case WAITING:
+                // We are at Warehouse trying to pick up items
+                if (location == AgentLocation.WAREHOUSE && materialsCarried < totalMaterialsNeeded) {
+                    int sourceIndex = currentProductOrder.getSourceMaterialIndex();
+                    stateDescriptor = "Picking materials: " + materialsCarried + "/" + totalMaterialsNeeded;
 
-                            materialsNeeded = currentProductOrder.getRequiredMaterials(targetIndex);
-                            orderProgress++;
-                            System.out.println("Starting new order: source=" + sourceIndex + ", target=" + targetIndex
-                                    + ", materials=" + materialsNeeded);
-                            inventoryAgent.requestMaterials(materialsNeeded);
-                        }
+                    // Try to pick ONE item
+                    boolean success = warehouse.getMaterial(sourceIndex);
 
-                        if (!hasMaterial) {
-                            hasMaterial = warehouse.getMaterial(sourceIndex);
-                        }
-
-                        if (!hasMaterial) {
-                            System.out.println("Waiting materials");
-                        }
-
-                        if (hasMaterial && orderProgress < currentProductOrder.quantity) {
-                            orderProgress++;
-                            System.out.println("Processing order... progress=" + orderProgress + "/"
-                                    + currentProductOrder.quantity);
-                            sleepTime = 1000 * targetIndex;
-                            System.out.println("Processed");
-                            hasMaterial = false;
-                            break;
-                        }
-
-                        if (orderProgress == currentProductOrder.quantity) {
-                            orderProgress = -1;
-                            warehouse.AddMaterials(targetIndex, currentProductOrder.quantity);
-                            currentProductOrder = null;
-                            System.out.println("Completed order. Added materials to target index " + targetIndex);
-                            break;
-                        }
+                    if (success) {
+                        materialsCarried++;
+                        System.out.println(threadID + ": Picked up 1 item (" + materialsCarried + "/" + totalMaterialsNeeded + ")");
+                        sleepTime = 200; // Small delay for picking action
                     } else {
+                        // Warehouse is empty!
+                        // We DO NOT request again. We just wait.
+                        // The request we made at the start is being processed by the DeliveryAgent.
+                        // System.out.println(threadID + ": Warehouse empty. Waiting for delivery...");
+                        stateDescriptor = "Waiting for materials "+ materialsCarried + "/" + totalMaterialsNeeded;
                         sleepTime = 1000;
                     }
                 } else if (state == AgentState.ON_BREAK) {
@@ -151,20 +170,83 @@ public class WorkerAgent extends BaseAgent {
                 }
                 break;
 
-            case BATHROOM:
-            case BREAKROOM:
-                if (state == AgentState.ON_BREAK) {
-                    System.out.println("[" + threadID + "] On break at " + location);
-                    sleepTime = 250;
-                } else if (state == AgentState.WORKING || state == AgentState.IDLE) {
-                    sleepTime = 200;
+            case WORKING:
+                if (currentProductOrder != null) {
+                    if (!holdingWorkstation) {
+                        state = AgentState.WAITING;
+                        stateDescriptor = "Waiting for workstation";
+                        zones.getWorkstations().enter();
+                        state = AgentState.WORKING;
+                        holdingWorkstation = true;
+                    }
+
+                    orderProgress++;
+                    stateDescriptor = "Building... " + orderProgress + "/" + currentProductOrder.quantity;
+                    sleepTime = 500 * currentProductOrder.getTargetProductIndex();
+                    System.out.println(threadID + ": Building... " + orderProgress + "/" + currentProductOrder.quantity);
                 }
                 break;
 
-            default:
-                System.out.println("Undefined location behavior");
-                sleepTime = 200;
+            case IDLE:
+                stateDescriptor = "Waiting for orders";
+                sleepTime = 500;
+                break;
+
+            case ON_BREAK:
+                stateDescriptor = "Taking a break in "+location.toString();
+                sleepTime = 2000;
                 break;
         }
+    }
+
+    private void startMovingTo(AgentLocation destination) {
+        this.targetLocation = destination;
+        this.state = AgentState.MOVING;
+    }
+
+    private void arriveAtDestination() {
+        switch (location) {
+            case WAREHOUSE:
+                state = AgentState.WAITING;
+                break;
+            case FACTORY:
+                state = (currentProductOrder != null) ? AgentState.WORKING : AgentState.IDLE;
+                break;
+            case BREAKROOM:
+            case BATHROOM:
+                state = AgentState.ON_BREAK;
+                break;
+        }
+    }
+
+    private void completeOrder() {
+        System.out.println(threadID + ": Order Complete!");
+        // We assume AddMaterials is safe (check Warehouse constructor)
+
+        if (holdingWorkstation) {
+            // CHANGE: Access via ZonesAPI
+            zones.getWorkstations().leave();
+            holdingWorkstation = false;
+        }
+
+        warehouse.AddMaterials(currentProductOrder.getTargetProductIndex(), currentProductOrder.quantity);
+
+        currentProductOrder = null;
+        orderProgress = 0;
+        materialsCarried = 0;
+        state = AgentState.IDLE;
+    }
+
+    private boolean shouldTakeBreak() {
+        shiftsSinceBreak++;
+        if (shiftsSinceBreak > 5) {
+            return random.nextInt(100) < (shiftsSinceBreak * 2);
+        }
+        return false;
+    }
+
+    private boolean shouldEndBreak() {
+        breaksSinceShift++;
+        return random.nextInt(100) < (breaksSinceShift * 10);
     }
 }

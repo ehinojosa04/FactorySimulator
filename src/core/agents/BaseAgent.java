@@ -2,6 +2,7 @@ package core.agents;
 
 import java.util.Random;
 
+
 public abstract class BaseAgent extends Thread{
     protected final AgentType type;
     protected final String threadID;
@@ -13,7 +14,9 @@ public abstract class BaseAgent extends Thread{
     protected int shiftsSinceBreak;
     protected int breaksSinceShift;
     protected int sleepTime;
-    
+
+    protected String stateDescriptor;
+
     public BaseAgent(AgentType type, String threadID, AgentLocation location) {
         this.type = type;
         this.threadID = threadID;
@@ -22,6 +25,7 @@ public abstract class BaseAgent extends Thread{
         this.shiftsSinceBreak = 0;
         this.breaksSinceShift = 0;
         this.sleepTime = 0;
+        this.stateDescriptor = "";
 
         System.out.println("Agent "+threadID+" ("+type+"): "+" has been started");
     }
@@ -66,5 +70,9 @@ public abstract class BaseAgent extends Thread{
 
     public AgentType getAgentType(){
         return type;
+    }
+
+    public String getStateDescriptor(){
+        return stateDescriptor;
     }
 }

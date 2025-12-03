@@ -25,26 +25,19 @@ public class ManagerAgent extends BaseAgent {
 
     @Override
     protected void performLocationBehavior() {
-        if (factory.productOrders.peek() == null) {
-            for (int i = 1; i < factory.stages.size(); i++) {
-                factory.productOrders
-                        .add(new ProductOrder(random.nextInt(factory.stages.size()) + 1, random.nextInt(9) + 1));
+        if (factory.productOrders.peek() == null){
+            for (int i = 1; i < factory.orderBatchSize; i++){
+                factory.productOrders.add(new ProductOrder(random.nextInt(factory.productsOffered)+1, random.nextInt(9)+1));
             }
         }
     }
 
     private void hireWorkers() {
         System.out.println("Hiring");
-        factory.inventoryAgent = new InventoryAgent("InventoryAgent", AgentLocation.WAREHOUSE, factory.warehouse,
-                factory.deliveryAgents);
+        factory.inventoryAgent = new InventoryAgent("InventoryAgent", AgentLocation.WAREHOUSE, factory.warehouse, factory.truckMaxCapacity, factory.deliveryAgents);
 
         for (int i = 0; i < factory.nFactoryWorkers; i++) {
-            factory.workerAgents.add(new WorkerAgent(
-                    "Worker-" + i,
-                    AgentLocation.FACTORY,
-                    factory.warehouse,
-                    factory.productOrders,
-                    factory.inventoryAgent));
+            factory.workerAgents.add(new WorkerAgent("Worker-"+i, AgentLocation.FACTORY, factory.warehouse, factory.productOrders, factory.inventoryAgent, factory.zones));
         }
 
         System.out.println("Hired " + factory.workerAgents.size() + " factory workers");

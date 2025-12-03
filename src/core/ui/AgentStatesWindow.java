@@ -20,7 +20,7 @@ public class AgentStatesWindow extends JFrame implements Runnable {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        String[] columnNames = {"Agent ID", "Type", "State", "Location"};
+        String[] columnNames = {"Agent ID", "Type", "State", "Location", "Descriptor"};
         tableModel = new DefaultTableModel(columnNames, 0);
         JTable table = new JTable(tableModel);
         table.setFont(new Font("SansSerif", Font.PLAIN, 14));
@@ -42,7 +42,7 @@ public class AgentStatesWindow extends JFrame implements Runnable {
         while (running) {
             try {
                 SwingUtilities.invokeLater(this::updateTable);
-                Thread.sleep(1000);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 running = false;
                 break;
@@ -58,6 +58,7 @@ public class AgentStatesWindow extends JFrame implements Runnable {
                 agent.getAgentType(),
                 agent.getAgentState(),
                 agent.getLocation(),
+                agent.getStateDescriptor(),
             });
         }
     }
