@@ -3,16 +3,16 @@ package factory;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
+import core.Zones.ZonesAPI;
 import factory.agents.*;
 import factory.production.ProductOrder;
-import factory.production.Stage;
+import factory.production.Workstations;
 import factory.warehouse.Warehouse;
 
 public class Factory {
     public Warehouse warehouse;
     ManagerAgent manager;
 
-    public ArrayList<Stage> stages;
     public ArrayList<WorkerAgent> workerAgents;
     public ArrayList<DeliveryAgent> deliveryAgents;
     
@@ -20,11 +20,13 @@ public class Factory {
     public int nFactoryWorkers, nDeliveryWorkers;
 
     public LinkedList<ProductOrder> productOrders;
-    int orderBatchSize;
+    public ZonesAPI zones;
+    public int orderBatchSize, productsOffered, truckMaxCapacity;
 
-    public Factory(int nStages, int nFactoryWorkers, int nDeliveryWorkers) {
+    public Factory(int nWorkstation, int orderBatchSize, int productsOffered, int nFactoryWorkers, int truckMaxCapacity, int nDeliveryWorkers, ZonesAPI zones) {
+        this.zones = zones;
         warehouse = new Warehouse();
-        stages = new ArrayList<>();
+        zones.setWorkstations(new Workstations(nWorkstation));
         productOrders = new LinkedList<>();
 
         this.nFactoryWorkers = nFactoryWorkers;
@@ -32,9 +34,12 @@ public class Factory {
 
         this.nDeliveryWorkers = nDeliveryWorkers;
         deliveryAgents = new ArrayList<>(nDeliveryWorkers);
-        
-        for (int i = 0; i < nStages; i++) {
-            stages.add(new Stage(500 + 500 * i));
+
+        this.orderBatchSize = orderBatchSize;
+        this.productsOffered = productsOffered;
+        this.truckMaxCapacity = truckMaxCapacity;
+
+        for (int i = 0; i < productsOffered; i++) {
             warehouse.inventory.add(0);
         }
 
