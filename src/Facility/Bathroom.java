@@ -5,7 +5,7 @@ import core.agents.AgentState;
 
 public class Bathroom extends Facility {
     public Bathroom() {
-        super(5);
+        super(1);
     }
 
     @Override

@@ -124,6 +124,7 @@ public class WorkerAgent extends BaseAgent {
             case WORKING:
                 if (shouldTakeBreak()) {
                     System.out.println(threadID + ": Needs a break. Heading to Breakroom.");
+                    // startMovingTo(AgentLocation.BATHROOM);
                     startMovingTo(random.nextBoolean() ? AgentLocation.BREAKROOM : AgentLocation.BATHROOM);
                     return;
                 }
@@ -240,11 +241,13 @@ public class WorkerAgent extends BaseAgent {
                 breakRequestInProgress = true;
                 System.out.println("[" + threadID + "] Requesting breakroom break through server...");
                 breakroomConnection.requestBreak();
+                shiftsSinceBreak = 0;
                 break;
             case BATHROOM:
                 breakRequestInProgress = true;
                 System.out.println("[" + threadID + "] Requesting bathroom break through server...");
                 bathroomConnection.requestBreak();
+                shiftsSinceBreak = 0;
                 break;
         }
     }
