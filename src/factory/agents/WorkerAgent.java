@@ -141,11 +141,22 @@ public class WorkerAgent extends BaseAgent {
                         state = AgentState.WORKING;
                         holdingWorkstation = true;
                     }
+// Only increment if we haven't reached the target quantity
+                    if (orderProgress < currentProductOrder.quantity) {
+                        orderProgress++;
 
-                    orderProgress++;
-                    stateDescriptor = "Building... " + orderProgress + "/" + currentProductOrder.quantity;
-                    sleepTime = 500 * currentProductOrder.getTargetProductIndex();
-                    System.out.println(threadID + ": Building... " + orderProgress + "/" + currentProductOrder.quantity);
+                        // Calculate sleep time based on effort
+                        sleepTime = 500 * currentProductOrder.getTargetProductIndex();
+
+                        stateDescriptor = "Building... " + orderProgress + "/" + currentProductOrder.quantity;
+                        System.out.println(threadID + ": Building... " + orderProgress + "/" + currentProductOrder.quantity);
+                    } else {
+                        // If we are done (e.g. returned from break with 7/7),
+                        // just wait a tiny bit for the processNextState to file the paperwork.
+                        stateDescriptor = "Finishing touches...";
+                        sleepTime = 100;
+                    }
+                    // --- BUG FIX ENDS HERE ---
                 }
                 break;
 

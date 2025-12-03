@@ -38,7 +38,7 @@ public class ManagerAgent extends BaseAgent{
         System.out.println("Hired "+factory.workerAgents.size()+" factory workers");
 
         for (int i = 0; i < factory.nDeliveryWorkers; i++) {
-            factory.deliveryAgents.add(new DeliveryAgent("Delivery-"+i, AgentLocation.LOADING_DECK, factory.warehouse));
+            factory.deliveryAgents.add(new DeliveryAgent("Delivery-"+i, AgentLocation.LOADING_DECK, factory.warehouse, factory.truckMaxCapacity));
         }
         System.out.println("Hiring done");
     }
