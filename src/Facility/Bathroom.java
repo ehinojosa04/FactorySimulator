@@ -25,6 +25,7 @@ public class Bathroom extends Facility {
     protected void onExit(String agentId, ClientChannel channel) throws InterruptedException {
         channel.sendState(agentId, AgentState.MOVING);
         Thread.sleep(1000);
+        channel.sendState(agentId, AgentState.IDLE);
         channel.sendLocation(agentId, AgentLocation.FACTORY);
     }
 }
