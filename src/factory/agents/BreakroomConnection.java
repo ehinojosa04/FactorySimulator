@@ -1,12 +1,12 @@
 package factory.agents;
 
-public class BathroomConnection extends FacilityConnection {
-    public BathroomConnection(String host, int port, WorkerAgent agent) {
+public class BreakroomConnection extends FacilityConnection {
+    public BreakroomConnection(String host, int port, WorkerAgent agent) {
         super(host, port, agent);
     }
 
     public void requestBreak() {
-        sendLine("REQUEST_BATHROOM");
+        sendLine("REQUEST_BREAKROOM");
     }
 
     @Override
