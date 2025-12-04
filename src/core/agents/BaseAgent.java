@@ -111,7 +111,7 @@ public abstract class BaseAgent extends Thread{
                 this.breakroomConnection.close();
             }
 
-            state = AgentState.IDLE;
+            state = AgentState.MOVING;
             breakRequestInProgress = false;
             hasRequestedBreak = false;
             shiftsSinceBreak = 0;
