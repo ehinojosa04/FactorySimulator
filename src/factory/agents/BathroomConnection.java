@@ -11,6 +11,6 @@ public class BathroomConnection extends FacilityConnection {
 
     @Override
     protected void handleEventFromServer(String eventType, String[] parts) {
-        agent.handleBathroomEventFromServer(eventType);
+        agent.handleServerEvent(eventType);
     }
 }

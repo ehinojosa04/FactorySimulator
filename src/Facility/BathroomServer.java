@@ -83,6 +83,7 @@ public class BathroomServer extends FacilityServer {
                     facility.handleAccessRequest(agentId, this);
                     break;
                 case "QUIT":
+                    System.out.println("QUITTING CONNECTION");
                     sendEvent(agentId, "BYE");
                     try {
                         socket.close();

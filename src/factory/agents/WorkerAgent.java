@@ -15,11 +15,10 @@ public class WorkerAgent extends BaseAgent {
     private final Warehouse warehouse;
     private final InventoryAgent inventoryAgent;
 
-    // START DISTRIBUTED
     private final BathroomConnection bathroomConnection;
     private final BreakroomConnection breakroomConnection;
     private volatile boolean breakRequestInProgress = false;
-    // END DISTRIBUTED
+    private volatile boolean hasRequestedBreak = false;
 
     private final ZonesAPI zones;
 
@@ -44,35 +43,40 @@ public class WorkerAgent extends BaseAgent {
         this.warehouse = warehouse;
         this.inventoryAgent = inventoryAgent;
         this.zones = zones;
-        this.targetLocation = location;
+        this.targetLocation = null; // Start with no target
         this.holdingWorkstation = false;
 
         this.bathroomConnection = new BathroomConnection("localhost", 5000, this);
         this.breakroomConnection = new BreakroomConnection("localhost", 5001, this);
     }
 
-    public void updateStateFromServer(AgentState newState) {
+    public synchronized void updateStateFromServer(AgentState newState) {
         this.state = newState;
-        System.out.println("[" + threadID + "] State from bathroom server: " + newState);
+        System.out.println("[" + threadID + "] State from server: " + newState);
     }
 
-    public void updateLocationFromServer(AgentLocation newLocation) {
-        System.out.println("[" + threadID + "] Location from bathroom server: " + newLocation);
+    public synchronized void updateLocationFromServer(AgentLocation newLocation) {
+        System.out.println("[" + threadID + "] Location from server: " + newLocation);
+
+        AgentLocation oldLocation = this.location;
+        this.location = newLocation;
 
         if (newLocation == AgentLocation.FACTORY) {
-            if (location == AgentLocation.BATHROOM) this.bathroomConnection.close();
-            else if (location == AgentLocation.BREAKROOM) this.breakroomConnection.close();
-        }
+            if (oldLocation == AgentLocation.BATHROOM) {
+                this.bathroomConnection.close();
+            } else if (oldLocation == AgentLocation.BREAKROOM) {
+                this.breakroomConnection.close();
+            }
 
-        this.location = newLocation;
+            state = AgentState.IDLE;
+            breakRequestInProgress = false;
+            hasRequestedBreak = false;
+            shiftsSinceBreak = 0;
+        }
     }
 
-    public void handleBathroomEventFromServer(String eventType) {
-        System.out.println("[" + threadID + "] Bathroom event: " + eventType);
-        if ("EXITED_BUFFER".equals(eventType)) {
-            breakRequestInProgress = false;
-            System.out.println("[" + threadID + "] Finished bathroom break, back to work.");
-        }
+    public void handleServerEvent(String eventType) {
+        System.out.println("[" + threadID + "] Facility event: " + eventType);
     }
 
     @Override
@@ -86,50 +90,49 @@ public class WorkerAgent extends BaseAgent {
 
                     if (currentProductOrder != null) {
                         System.out.println(threadID + ": Received order. Calculating needs...");
-
                         this.totalMaterialsNeeded = currentProductOrder.quantity;
                         this.materialsCarried = 0;
-
-                        System.out.println(threadID + ": Requesting " + totalMaterialsNeeded + " materials from Inventory.");
+                        System.out.println(
+                                threadID + ": Requesting " + totalMaterialsNeeded + " materials from Inventory.");
                         inventoryAgent.requestMaterials(totalMaterialsNeeded);
-
                         startMovingTo(AgentLocation.WAREHOUSE);
                     }
                 }
                 break;
 
             case MOVING:
-                if (location == targetLocation) {
+                // Only process arrival if we have a target and we're there
+                if (targetLocation != null && location == targetLocation) {
                     arriveAtDestination();
+                    targetLocation = null; // Clear to prevent re-triggering
                 }
                 break;
 
             case WAITING:
                 if (location == AgentLocation.WAREHOUSE && currentProductOrder != null) {
                     if (materialsCarried >= totalMaterialsNeeded) {
-                        System.out.println(threadID + ": Collected all " + materialsCarried + " items. Returning to Factory.");
+                        System.out.println(
+                                threadID + ": Collected all " + materialsCarried + " items. Returning to Factory.");
                         startMovingTo(AgentLocation.FACTORY);
                     }
                 }
                 break;
 
             case WORKING:
-                if (shouldTakeBreak()) {
-                    System.out.println(threadID + ": Needs a break. Heading to Breakroom.");
+                // CRITICAL: Don't check break if we're already in a break cycle
+                if (!breakRequestInProgress && !hasRequestedBreak && shouldTakeBreak()) {
+                    System.out.println(threadID + ": Needs a break. Heading to facility.");
                     startMovingTo(random.nextBoolean() ? AgentLocation.BREAKROOM : AgentLocation.BATHROOM);
                     return;
                 }
 
-                if (orderProgress >= currentProductOrder.quantity) {
+                if (currentProductOrder != null && orderProgress >= currentProductOrder.quantity) {
                     completeOrder();
                 }
                 break;
 
             case ON_BREAK:
-                if (!breakRequestInProgress) {
-                    System.out.println(threadID + ": Break over. Returning to Factory.");
-                    startMovingTo(AgentLocation.FACTORY);
-                }
+                // Just wait - server controls this state
                 break;
         }
     }
@@ -138,13 +141,25 @@ public class WorkerAgent extends BaseAgent {
     protected void performLocationBehavior() {
         switch (state) {
             case MOVING:
-                stateDescriptor = "Moving to " + targetLocation;
-                sleepTime = 1000;
-                location = targetLocation;
+                // If server is controlling us (during break), don't override location
+                if (breakRequestInProgress) {
+                    sleepTime = 100;
+                    stateDescriptor = "Server controlling movement";
+                    return;
+                }
+
+                // Otherwise, simulate moving toward target
+                if (targetLocation != null) {
+                    stateDescriptor = "Moving to " + targetLocation;
+                    sleepTime = 1000;
+                    // IMPORTANT: Only update location if NOT being controlled by server
+                    location = targetLocation;
+                }
                 break;
 
             case WAITING:
-                if (location == AgentLocation.WAREHOUSE && materialsCarried < totalMaterialsNeeded) {
+                if (location == AgentLocation.WAREHOUSE && currentProductOrder != null
+                        && materialsCarried < totalMaterialsNeeded) {
                     int sourceIndex = currentProductOrder.getSourceMaterialIndex();
                     stateDescriptor = "Picking materials: " + materialsCarried + "/" + totalMaterialsNeeded;
                     boolean success = warehouse.getMaterial(sourceIndex);
@@ -158,6 +173,8 @@ public class WorkerAgent extends BaseAgent {
                         stateDescriptor = "Waiting for materials " + materialsCarried + "/" + totalMaterialsNeeded;
                         sleepTime = 1000;
                     }
+                } else {
+                    sleepTime = 500;
                 }
                 break;
 
@@ -173,9 +190,9 @@ public class WorkerAgent extends BaseAgent {
                     if (orderProgress < currentProductOrder.quantity) {
                         orderProgress++;
                         sleepTime = 500 * currentProductOrder.getTargetProductIndex();
-
                         stateDescriptor = "Building... " + orderProgress + "/" + currentProductOrder.quantity;
-                        System.out.println(threadID + ": Building... " + orderProgress + "/" + currentProductOrder.quantity);
+                        System.out.println(
+                                threadID + ": Building... " + orderProgress + "/" + currentProductOrder.quantity);
                     } else {
                         stateDescriptor = "Finishing touches...";
                         sleepTime = 100;
@@ -189,8 +206,13 @@ public class WorkerAgent extends BaseAgent {
                 break;
 
             case ON_BREAK:
-                stateDescriptor = "Taking a break in " + location.toString();
-                sleepTime = 2000;
+                stateDescriptor = "Taking a break in " + (location != null ? location.toString() : "transition");
+                sleepTime = 500;
+                break;
+
+            default:
+                stateDescriptor = "Unknown state";
+                sleepTime = 500;
                 break;
         }
     }
@@ -209,16 +231,20 @@ public class WorkerAgent extends BaseAgent {
                 state = (currentProductOrder != null) ? AgentState.WORKING : AgentState.IDLE;
                 break;
             case BREAKROOM:
-                breakRequestInProgress = true;
-                System.out.println("[" + threadID + "] Requesting breakroom break through server...");
-                breakroomConnection.requestBreak();
-                shiftsSinceBreak = 0;
+                if (!hasRequestedBreak) {
+                    hasRequestedBreak = true;
+                    breakRequestInProgress = true;
+                    System.out.println("[" + threadID + "] Requesting breakroom break through server...");
+                    breakroomConnection.requestBreak();
+                }
                 break;
             case BATHROOM:
-                breakRequestInProgress = true;
-                System.out.println("[" + threadID + "] Requesting bathroom break through server...");
-                bathroomConnection.requestBreak();
-                shiftsSinceBreak = 0;
+                if (!hasRequestedBreak) {
+                    hasRequestedBreak = true;
+                    breakRequestInProgress = true;
+                    System.out.println("[" + threadID + "] Requesting bathroom break through server...");
+                    bathroomConnection.requestBreak();
+                }
                 break;
         }
     }
@@ -241,6 +267,12 @@ public class WorkerAgent extends BaseAgent {
 
     private boolean shouldTakeBreak() {
         shiftsSinceBreak++;
+
+        // COOLDOWN: Don't take break immediately after returning
+        if (shiftsSinceBreak <= 3) {
+            return false;
+        }
+
         if (shiftsSinceBreak > 5) {
             return random.nextInt(100) < (shiftsSinceBreak * 2);
         }

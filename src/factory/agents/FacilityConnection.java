@@ -56,11 +56,28 @@ public abstract class FacilityConnection {
     }
 
     public synchronized void close() {
+        System.out.println("Closing server connection");
         running = false;
+
         try {
-            if (out != null) {
+            if (out != null && socket != null && !socket.isClosed() && socket.isConnected()) {
                 out.println("QUIT");
                 out.flush();
+            }
+        } catch (Exception e) {
+            System.out.println("[" + agent.getThreadID() + "] Could not send QUIT: " + e.getMessage());
+        }
+
+        try {
+            if (in != null) {
+                in.close();
+            }
+        } catch (IOException ignored) {
+        }
+
+        try {
+            if (out != null) {
+                out.close();
             }
         } catch (Exception ignored) {
         }
@@ -75,6 +92,13 @@ public abstract class FacilityConnection {
         socket = null;
         out = null;
         in = null;
+
+        if (listenerThread != null && listenerThread.isAlive()) {
+            try {
+                listenerThread.join(1000);
+            } catch (InterruptedException ignored) {
+            }
+        }
         listenerThread = null;
     }
 
@@ -86,7 +110,8 @@ public abstract class FacilityConnection {
             }
         } catch (IOException e) {
             if (running) {
-                System.out.println("[" + agent.getThreadID() + "] Facility server connection closed: " + e.getMessage());
+                System.out
+                        .println("[" + agent.getThreadID() + "] Facility server connection closed: " + e.getMessage());
             }
         } finally {
             // Ensure resources are cleaned if server disconnects
