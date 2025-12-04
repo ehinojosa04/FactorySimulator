@@ -22,8 +22,9 @@ public class Factory {
     public LinkedList<ProductOrder> productOrders;
     public ZonesAPI zones;
     public int orderBatchSize, productsOffered, truckMaxCapacity;
+    public int transportTime, productionTime, requestTime;
 
-    public Factory(int nWorkstation, int orderBatchSize, int productsOffered, int nFactoryWorkers, int truckMaxCapacity, int nDeliveryWorkers, ZonesAPI zones) {
+    public Factory(int nWorkstation, int orderBatchSize, int productsOffered, int productionTime, int nFactoryWorkers, int truckMaxCapacity, int transportTime, int nDeliveryWorkers, int requestTime, ZonesAPI zones) {
         this.zones = zones;
         warehouse = new Warehouse();
         zones.setWorkstations(new Workstations(nWorkstation));
@@ -38,6 +39,10 @@ public class Factory {
         this.orderBatchSize = orderBatchSize;
         this.productsOffered = productsOffered;
         this.truckMaxCapacity = truckMaxCapacity;
+
+        this.transportTime = transportTime;
+        this.productionTime = productionTime;
+        this.requestTime = requestTime;
 
         for (int i = 0; i < productsOffered; i++) {
             warehouse.inventory.add(0);

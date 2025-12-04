@@ -30,21 +30,21 @@ public class WorkerAgent extends BaseAgent {
 
     private AgentLocation targetLocation;
     private boolean holdingWorkstation;
+    private int productionTime;
+    private int requestTime;
 
-    public WorkerAgent(
-            String threadID,
-            AgentLocation location,
-            Warehouse warehouse,
-            LinkedList<ProductOrder> productOrders,
-            InventoryAgent inventoryAgent,
-            ZonesAPI zones) {
+    private boolean materialsRequested = false;
+
+    public WorkerAgent(String threadID, AgentLocation location, Warehouse warehouse, LinkedList<ProductOrder> productOrders, int productionTime, InventoryAgent inventoryAgent, int requestTime, ZonesAPI zones) {
         super(AgentType.WORKER, threadID, location);
         this.productOrders = productOrders;
         this.warehouse = warehouse;
         this.inventoryAgent = inventoryAgent;
         this.zones = zones;
-        this.targetLocation = null; // Start with no target
+        this.targetLocation = null;
         this.holdingWorkstation = false;
+        this.productionTime = productionTime;
+        this.requestTime = requestTime;
 
         this.bathroomConnection = new BathroomConnection("localhost", 5002, this);
         this.breakroomConnection = new BreakroomConnection("localhost", 5001, this);
@@ -52,7 +52,7 @@ public class WorkerAgent extends BaseAgent {
 
     public synchronized void updateStateFromServer(AgentState newState) {
         this.state = newState;
-        System.out.println("[" + threadID + "] State from server: " + newState);
+        // System.out.println("[" + threadID + "] State from server: " + newState);
     }
 
     public synchronized void updateLocationFromServer(AgentLocation newLocation) {
@@ -68,6 +68,7 @@ public class WorkerAgent extends BaseAgent {
                 this.breakroomConnection.close();
             }
 
+            // When returning, we go to IDLE to let processNextState decide the next move
             state = AgentState.IDLE;
             breakRequestInProgress = false;
             hasRequestedBreak = false;
@@ -85,48 +86,96 @@ public class WorkerAgent extends BaseAgent {
             case IDLE:
                 if (location == AgentLocation.FACTORY) {
                     if (currentProductOrder == null) {
+                        stateDescriptor = "Requesting production order";
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+
                         currentProductOrder = productOrders.poll();
+                        if (currentProductOrder != null) {
+                            materialsRequested = false;
+                        }
                     }
 
+                    // 2. Process Order Logic
                     if (currentProductOrder != null) {
-                        System.out.println(threadID + ": Received order. Calculating needs...");
-                        this.totalMaterialsNeeded = currentProductOrder.quantity;
-                        this.materialsCarried = 0;
-                        System.out.println(
-                                threadID + ": Requesting " + totalMaterialsNeeded + " materials from Inventory.");
-                        inventoryAgent.requestMaterials(totalMaterialsNeeded);
-                        startMovingTo(AgentLocation.WAREHOUSE);
+
+                        // Scenario A: NEW Order
+                        if (!materialsRequested) {
+                            stateDescriptor = "Received order for " + productOrders.size() + " items";
+                            this.totalMaterialsNeeded = currentProductOrder.quantity;
+                            this.materialsCarried = 0;
+
+                            try {
+                                Thread.sleep(2000);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            System.out.println(threadID + ": Requesting " + totalMaterialsNeeded + " materials.");
+                            stateDescriptor = "Requesting " + totalMaterialsNeeded + " raw materials";
+
+                            try {
+                                Thread.sleep(2000);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            inventoryAgent.requestMaterials(totalMaterialsNeeded);
+
+                            materialsRequested = true;
+
+                            startMovingTo(AgentLocation.WAREHOUSE);
+                        }
+
+                        else {
+                            stateDescriptor = "Resuming previous order";
+                            try {
+                                Thread.sleep(2000);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+
+                            if (materialsCarried < totalMaterialsNeeded) {
+                                startMovingTo(AgentLocation.WAREHOUSE);
+                            } else {
+                                state = AgentState.WORKING;
+                            }
+                        }
                     }
                 }
                 break;
 
             case MOVING:
-                // Only process arrival if we have a target and we're there
                 if (targetLocation != null && location == targetLocation) {
                     arriveAtDestination();
-                    targetLocation = null; // Clear to prevent re-triggering
+                    targetLocation = null;
                 }
                 break;
 
             case WAITING:
                 if (location == AgentLocation.WAREHOUSE && currentProductOrder != null) {
                     if (materialsCarried >= totalMaterialsNeeded) {
-                        System.out.println(
-                                threadID + ": Collected all " + materialsCarried + " items. Returning to Factory.");
+                        System.out.println(threadID + ": Collected all " + materialsCarried + " items. Returning to Factory.");
                         startMovingTo(AgentLocation.FACTORY);
                     }
                 }
                 break;
 
             case WORKING:
-                // CRITICAL: Don't check break if we're already in a break cycle
                 if (!breakRequestInProgress && !hasRequestedBreak && shouldTakeBreak()) {
-                    System.out.println(threadID + ": Needs a break. Heading to facility.");
                     if (holdingWorkstation){
+                        stateDescriptor = "Releasing workstation";
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                         zones.getWorkstations().leave();
                         holdingWorkstation = false;
                     }
-
                     startMovingTo(random.nextBoolean() ? AgentLocation.BREAKROOM : AgentLocation.BATHROOM);
                     return;
                 }
@@ -137,7 +186,6 @@ public class WorkerAgent extends BaseAgent {
                 break;
 
             case ON_BREAK:
-                // Just wait - server controls this state
                 break;
         }
     }
@@ -146,18 +194,14 @@ public class WorkerAgent extends BaseAgent {
     protected void performLocationBehavior() {
         switch (state) {
             case MOVING:
-                // If server is controlling us (during break), don't override location
                 if (breakRequestInProgress) {
-                    sleepTime = 100;
                     stateDescriptor = "Server controlling movement";
+                    sleepTime = 100;
                     return;
                 }
-
-                // Otherwise, simulate moving toward target
                 if (targetLocation != null) {
                     stateDescriptor = "Moving to " + targetLocation;
-                    sleepTime = 1000;
-                    // IMPORTANT: Only update location if NOT being controlled by server
+                    sleepTime = 2000;
                     location = targetLocation;
                 }
                 break;
@@ -171,9 +215,8 @@ public class WorkerAgent extends BaseAgent {
 
                     if (success) {
                         materialsCarried++;
-                        System.out.println(threadID + ": Picked up 1 item (" + materialsCarried + "/"
-                                + totalMaterialsNeeded + ")");
-                        sleepTime = 200;
+                        System.out.println(threadID + ": Picked up 1 item (" + materialsCarried + "/" + totalMaterialsNeeded + ")");
+                        sleepTime = 500;
                     } else {
                         stateDescriptor = "Waiting for materials " + materialsCarried + "/" + totalMaterialsNeeded;
                         sleepTime = 1000;
@@ -194,13 +237,11 @@ public class WorkerAgent extends BaseAgent {
                     }
                     if (orderProgress < currentProductOrder.quantity) {
                         orderProgress++;
-                        sleepTime = 500 * currentProductOrder.getTargetProductIndex();
-                        stateDescriptor = "Building... " + orderProgress + "/" + currentProductOrder.quantity;
-                        System.out.println(
-                                threadID + ": Building... " + orderProgress + "/" + currentProductOrder.quantity);
+                        stateDescriptor = "Working: Order progress " + orderProgress + "/" + currentProductOrder.quantity;
+                        sleepTime = productionTime;
                     } else {
                         stateDescriptor = "Finishing touches...";
-                        sleepTime = 100;
+                        sleepTime = 500;
                     }
                 }
                 break;
@@ -267,20 +308,16 @@ public class WorkerAgent extends BaseAgent {
         currentProductOrder = null;
         orderProgress = 0;
         materialsCarried = 0;
+
+        // --- BUG FIX: Reset Flag ---
+        materialsRequested = false;
+
         state = AgentState.IDLE;
     }
 
     private boolean shouldTakeBreak() {
         shiftsSinceBreak++;
-
-        // COOLDOWN: Don't take break immediately after returning
-        if (shiftsSinceBreak <= 3) {
-            return false;
-        }
-
-        if (shiftsSinceBreak > 3) {
-            return random.nextInt(100) < (shiftsSinceBreak * 10);
-        }
-        return false;
+        if (shiftsSinceBreak <= 3) return false;
+        return random.nextInt(100) < (shiftsSinceBreak * 10);
     }
 }

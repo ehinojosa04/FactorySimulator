@@ -34,10 +34,10 @@ public class ManagerAgent extends BaseAgent {
 
     private void hireWorkers() {
         System.out.println("Hiring");
-        factory.inventoryAgent = new InventoryAgent("InventoryAgent", AgentLocation.WAREHOUSE, factory.warehouse, factory.truckMaxCapacity, factory.deliveryAgents);
+        factory.inventoryAgent = new InventoryAgent("InventoryAgent", AgentLocation.WAREHOUSE, factory.warehouse, factory.truckMaxCapacity, factory.deliveryAgents, factory.requestTime);
 
         for (int i = 0; i < factory.nFactoryWorkers; i++) {
-            factory.workerAgents.add(new WorkerAgent("Worker-"+i, AgentLocation.FACTORY, factory.warehouse, factory.productOrders, factory.inventoryAgent, factory.zones));
+            factory.workerAgents.add(new WorkerAgent("Worker-"+i, AgentLocation.FACTORY, factory.warehouse, factory.productOrders, factory.productionTime, factory.inventoryAgent, factory.requestTime, factory.zones));
         }
 
         System.out.println("Hired " + factory.workerAgents.size() + " factory workers");

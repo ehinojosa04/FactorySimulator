@@ -71,7 +71,7 @@ public class DeliveryAgent extends BaseAgent {
                 break;
 
             case MOVING:
-                stateDescriptor = "Driving to " + targetLocation + " Cargo: " + cargo;
+                stateDescriptor = "Driving to " + targetLocation + " Cargo: " + cargo+"/"+maxCapacity;
                 sleepTime = 5000;
                 location = targetLocation;
                 break;
@@ -89,7 +89,6 @@ public class DeliveryAgent extends BaseAgent {
                         sleepTime = 500;
 
                     } else {
-                        // --- LOADING COMPLETE ---
                         stateDescriptor = "Loading complete. Securing cargo.";
                         System.out.println(threadID + ": Truck full or Order filled. Heading to Warehouse.");
                         startMovingTo(AgentLocation.WAREHOUSE);
@@ -103,10 +102,9 @@ public class DeliveryAgent extends BaseAgent {
                         warehouse.AddMaterials(0, 1);
 
                         System.out.println(threadID + ": Unloading... (" + cargo + " left on truck)");
-                        sleepTime = 500; // Time to carry box to shelf
+                        sleepTime = 500;
 
                     } else {
-                        // --- UNLOADING COMPLETE ---
                         stateDescriptor = "Unloading complete. Checking manifest...";
                         System.out.println(threadID + ": Unloading complete.");
 

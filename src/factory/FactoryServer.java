@@ -11,9 +11,9 @@ import core.ui.ThreadStatesWindow;
 import core.ui.ZonesWindow;
 
 public class FactoryServer {
-    public FactoryServer(int workstations, int orderBatchSize, int productsOffered, int workers, int truckMaxCapacity, int delivery) {
+    public FactoryServer(int workstations, int orderBatchSize, int productsOffered, int timeToProduce, int workers, int truckMaxCapacity, int transportTime, int delivery, int requestTime) {
         ZonesAPI zones = new ZonesAPI();
-        Factory factory = new Factory(workstations, orderBatchSize, productsOffered, workers,truckMaxCapacity, delivery, zones);
+        Factory factory = new Factory(workstations, orderBatchSize, productsOffered, timeToProduce, workers,truckMaxCapacity, transportTime, delivery, requestTime, zones);
         new Thread(new InventoryWindow(factory.warehouse)).start();
 
         ArrayList<BaseAgent> agents = new ArrayList<>();

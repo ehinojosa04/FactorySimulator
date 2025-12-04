@@ -20,23 +20,19 @@ public class FactoryLauncher {
             panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
             panel.setBorder(BorderFactory.createEmptyBorder(10, 40, 10, 40));
 
-            JTextField workersTF = createField(panel, "Workers:", "5");
-            JTextField deliveryTF = createField(panel, "Delivery:", "1");
-            JTextField truckMaxCapacityTF = createField(panel, "Truck max capacity:", "10");
+            JTextField workersTF = createField(panel, "Workers:", "10");
+            JTextField deliveryTF = createField(panel, "Delivery:", "3");
+            JTextField truckMaxCapacityTF = createField(panel, "Truck max capacity:", "20");
 
 
             JTextField orderBatchSizeTF = createField(panel, "Order batch size:", "10");
             JTextField productsTF = createField(panel, "Types of products:", "5");
 
             JTextField workstationCpctyTF = createField(panel, "Workstation agent capacity:", "2");
-            JTextField BthrmCpctyTF = createField(panel, "Bathroom agent capacity:", "5");
-            JTextField BrkrmCpctyTF = createField(panel, "Breakroom  agent apacity:", "10");
 
-            JTextField pcrTF = createField(panel, "Production Conversion Ratio:", "1");
-            JTextField deliveryTimeTF = createField(panel, "Time for delivery (ms):", "10000");
-            JTextField timeToProduceTF = createField(panel, "Time to produce (ms):", "1000");
+            JTextField transportTimeTF = createField(panel, "Time for transportation (ms):", "10000");
+            JTextField timeToProduceTF = createField(panel, "Time to produce an item (ms):", "500");
             JTextField timeToRequestMaterialsTF = createField(panel, "Time to request materials (ms):", "500");
-            JTextField breakTimeTF = createField(panel, "Time inside break (ms):", "1000");
 
 
             JButton startButton = new JButton("Start Simulation");
@@ -57,8 +53,11 @@ public class FactoryLauncher {
                     int workers = Integer.parseInt(workersTF.getText());
                     int delivery = Integer.parseInt(deliveryTF.getText());
                     int truckMaxCapacity = Integer.parseInt(truckMaxCapacityTF.getText());
+                    int transportTime = Integer.parseInt(transportTimeTF.getText());
+                    int productionTime = Integer.parseInt(timeToProduceTF.getText());
+                    int requestTime = Integer.parseInt(timeToRequestMaterialsTF.getText());
 
-                    new FactoryServer(workstations, orderBatchSize, productsOffered, workers, truckMaxCapacity, delivery);
+                    new FactoryServer(workstations, orderBatchSize, productsOffered, productionTime, workers, truckMaxCapacity, transportTime, delivery, requestTime);
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(frame, "Please enter valid integers.", "Error", JOptionPane.ERROR_MESSAGE);
                 }

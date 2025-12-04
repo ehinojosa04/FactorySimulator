@@ -15,19 +15,20 @@ public class InventoryAgent extends BaseAgent {
     private List<DeliveryAgent> deliveryAgents;
     private final ReentrantLock lock;
     private int materialsPendingOfOrder, truckMaxCapacity;
+    private int requestTime;
 
-    public InventoryAgent(String threadID, AgentLocation location, Warehouse warehouse, int truckMaxCapacity, List<DeliveryAgent> deliveryAgents) {
+    public InventoryAgent(String threadID, AgentLocation location, Warehouse warehouse, int truckMaxCapacity, List<DeliveryAgent> deliveryAgents, int requestTime) {
         super(AgentType.INVENTORY, threadID, location);
         this.warehouse = warehouse;
         this.deliveryAgents = deliveryAgents;
         this.lock = new ReentrantLock();
         this.materialsPendingOfOrder = 0;
         this.truckMaxCapacity = truckMaxCapacity;
+        this.requestTime = requestTime;
     }
 
     @Override
     protected void processNextState() {
-        // Logic remains similar, but we check if ANY agent is available
         boolean anyAgentAvailable = false;
         for(DeliveryAgent da : deliveryAgents) {
             if(da.getLocation() == AgentLocation.LOADING_DECK && da.getCurrentOrder() == 0) {
@@ -39,7 +40,6 @@ public class InventoryAgent extends BaseAgent {
         if (materialsPendingOfOrder > 0) {
             state = anyAgentAvailable ? AgentState.WORKING : AgentState.WAITING;
         } else {
-            // Flavor logic
             if (state == AgentState.IDLE && random.nextInt(100) < 10) {
                 state = AgentState.WORKING;
             } else {
@@ -52,42 +52,35 @@ public class InventoryAgent extends BaseAgent {
     protected void performLocationBehavior() {
         switch (state) {
             case WORKING:
-                // Scenario A: Real Work (Distributing Orders)
                 if (materialsPendingOfOrder > 0) {
-
-                    // Iterate through ALL agents to distribute the load
                     for (DeliveryAgent agent : deliveryAgents) {
-
-                        // Stop if we ran out of work
                         if (materialsPendingOfOrder <= 0) break;
-
-                        // Check if THIS specific agent is available
                         if (agent.getLocation() == AgentLocation.LOADING_DECK && agent.getCurrentOrder() == 0) {
-
-                            // LOGIC: How much can this truck take?
-
                             int amountToAssign = Math.min(materialsPendingOfOrder, truckMaxCapacity);
+                            stateDescriptor = "Assigning " + amountToAssign + " items to " + agent.getThreadID();
 
-                            // Dispatch
+                            try {
+                                Thread.sleep(requestTime);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+
                             agent.setOrder(amountToAssign);
-                            resetMaterials(amountToAssign); // Decrement our local counter
+                            resetMaterials(amountToAssign);
 
-                            stateDescriptor = "Assigned " + amountToAssign + " items to " + agent.getThreadID();
                             System.out.println(threadID + ": Assigned " + amountToAssign + " to " + agent.getThreadID() + ". Remaining: " + materialsPendingOfOrder);
                         }
                     }
 
                     sleepTime = 1000;
-                }
-                // Scenario B: Busy Work
-                else {
+                } else {
                     stateDescriptor = "Processing administrative paperwork";
                     sleepTime = 2000;
                 }
                 break;
 
             case WAITING:
-                stateDescriptor = "BOTTLENECK: Need " + materialsPendingOfOrder + " units (No Agents!)";
+                stateDescriptor = "Need to order " + materialsPendingOfOrder + " units, no drivers";
                 sleepTime = 200;
                 break;
 
@@ -102,8 +95,6 @@ public class InventoryAgent extends BaseAgent {
                 break;
         }
     }
-
-    // --- Standard Methods ---
 
     public void requestMaterials(int nMaterials){
         try {
