@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import core.Zones.ZonesAPI;
 import core.agents.BaseAgent;
 import core.ui.AgentStatesWindow;
+import core.ui.FactoryVisualizationWindow;
 import core.ui.InventoryWindow;
 import core.ui.ThreadStatesWindow;
 import core.ui.ZonesWindow;
@@ -24,5 +25,6 @@ public class FactoryServer {
         new Thread(new AgentStatesWindow(agents)).start();
         new Thread(new ThreadStatesWindow(agents)).start();
         new Thread(new ZonesWindow(agents)).start();
+        new Thread(new FactoryVisualizationWindow(agents)).start();
     }
 }
