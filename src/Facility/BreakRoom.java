@@ -10,7 +10,7 @@ public class BreakRoom extends Facility {
 
     @Override
     protected void onEnter(String agentId, ClientChannel channel) throws InterruptedException {
-        channel.sendLocation(agentId, AgentLocation.BATHROOM);
+        channel.sendLocation(agentId, AgentLocation.BREAKROOM);
         channel.sendState(agentId, AgentState.MOVING);
         System.out.println("[" + agentId + "] Moving to the breakroom");
         Thread.sleep(1000);

@@ -51,8 +51,7 @@ public abstract class FacilityConnection {
             ensureConnected();
             out.println(line);
         } catch (IOException e) {
-            System.err.println("[" + agent.getThreadID() + "] Failed to send line to facility: "
-                    + e.getMessage());
+            System.err.println("[" + agent.getThreadID() + "] Failed to send line to facility: " + e.getMessage());
         }
     }
 
@@ -60,7 +59,6 @@ public abstract class FacilityConnection {
         running = false;
         try {
             if (out != null) {
-                // best-effort polite shutdown
                 out.println("QUIT");
                 out.flush();
             }
@@ -88,8 +86,7 @@ public abstract class FacilityConnection {
             }
         } catch (IOException e) {
             if (running) {
-                System.out.println("[" + agent.getThreadID() + "] Facility server connection closed: "
-                        + e.getMessage());
+                System.out.println("[" + agent.getThreadID() + "] Facility server connection closed: " + e.getMessage());
             }
         } finally {
             // Ensure resources are cleaned if server disconnects
@@ -127,8 +124,6 @@ public abstract class FacilityConnection {
                 break;
             }
             default:
-                // Unknown command: subclasses may choose to override handleUnknownCommand if
-                // needed
                 handleUnknownCommand(cmd, parts);
         }
     }
