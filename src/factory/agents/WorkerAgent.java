@@ -58,10 +58,10 @@ public class WorkerAgent extends BaseAgent {
 
     public void updateLocationFromServer(AgentLocation newLocation) {
         System.out.println("[" + threadID + "] Location from bathroom server: " + newLocation);
-        
+
         if (newLocation == AgentLocation.FACTORY) {
             if (location == AgentLocation.BATHROOM) this.bathroomConnection.close();
-            else if (location == AgentLocation.BREAKROOM) this.bathroomConnection.close();
+            else if (location == AgentLocation.BREAKROOM) this.breakroomConnection.close();
         }
 
         this.location = newLocation;
