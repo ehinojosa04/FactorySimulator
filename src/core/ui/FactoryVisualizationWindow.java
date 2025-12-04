@@ -25,33 +25,33 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
         this.agentVisuals = new HashMap<>();
 
         setTitle("Factory 2D Visualization - Proyecto Final");
-        // Aumentamos el ancho para acomodar el panel lateral
+        
         setSize(1450, 850); 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Initialize agent visuals
+        
         for (BaseAgent agent : agents) {
             Point2D startPos = getLocationCenter(agent.getLocation());
             agentVisuals.put(agent.getThreadID(), new AgentVisual(startPos));
         }
 
-        // 1. Panel de Información (Izquierda / WEST)
+        
         JPanel infoPanel = createInfoPanel();
         add(infoPanel, BorderLayout.WEST);
 
-        // 2. Panel de Visualización (Centro)
+        
         panel = new VisualizationPanel();
         add(panel, BorderLayout.CENTER);
 
-        // 3. Panel de Leyenda (Derecha / EAST)
+        
         JPanel legendPanel = createLegendPanel();
         add(legendPanel, BorderLayout.EAST);
 
         setVisible(true);
     }
 
-    // --- NUEVO: Panel de Información Académica ---
+    
     private JPanel createInfoPanel() {
         JPanel infoPanel = new JPanel();
         infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
@@ -61,9 +61,9 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
 
         // Logo
         try {
-            // Intenta cargar UPL.jpg desde la carpeta del proyecto
+            
             ImageIcon logoIcon = new ImageIcon("UPL.jpg");
-            // Escalar imagen si es muy grande
+            
             Image img = logoIcon.getImage(); 
             Image newImg = img.getScaledInstance(200, 150,  java.awt.Image.SCALE_SMOOTH); 
             JLabel logoLabel = new JLabel(new ImageIcon(newImg));
@@ -77,7 +77,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
 
         infoPanel.add(Box.createVerticalStrut(20));
 
-        // Textos con formato HTML para saltos de línea y estilos
+        
         JLabel infoLabel = new JLabel("<html><div style='text-align: center;'>" +
                 "<h2>Universidad Panamericana</h2>" +
                 "<h3>Ingeniería en Sistemas y Gráficas Computacionales</h3>" +
@@ -159,18 +159,18 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
             if (visual != null) {
                 Point2D targetPos;
                 
-                // Special handling for Manager - always below FACTORY label
+                
                 if (agent.getAgentType() == AgentType.MANAGER && 
                     agent.getLocation() == AgentLocation.FACTORY) {
                     targetPos = getManagerPosition();
                 }
-                // Special handling for Inventory - always below WAREHOUSE label
+                
                 else if (agent.getAgentType() == AgentType.INVENTORY && 
                          agent.getLocation() == AgentLocation.WAREHOUSE) {
                     targetPos = getInventoryPosition();
                 }
                 else {
-                    // Check if we need to recalculate position (location changed)
+                    
                     if (!visual.currentLocation.equals(agent.getLocation())) {
                         targetPos = getLocationCenter(agent.getLocation());
                         visual.setTargetPosition(targetPos);
@@ -180,49 +180,49 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
                     }
                 }
                 
-                visual.moveTowards(targetPos, 2.0); // 2 pixels per frame
+                visual.moveTowards(targetPos, 2.0); 
             }
         }
     }
 
     private Point2D getLocationCenter(AgentLocation location) {
-        // Randomization
+        
         double offsetX = (Math.random() - 0.5) * 120; 
         double offsetY = (Math.random() - 0.5) * 140; 
         
-        // Randomization limitada para zonas bajas
+        
         double offsetYLimitado = (Math.random() - 0.5) * 80; 
 
-        // NOTA: Se restaron 150px a todas las coordenadas X para compensar el panel izquierdo
+        
         switch (location) {
-            // Factory Block: Old X=720 -> New X=570
+            
             case FACTORY: return new Point2D.Double(570 + offsetX, 410 + offsetY);
             
-            // Warehouse Block: Old X=420 -> New X=270
+            
             case WAREHOUSE: return new Point2D.Double(270 + offsetX, 410 + offsetY);
             
-            // Bathroom Block: Old X=420 -> New X=270
+            
             case BATHROOM: return new Point2D.Double(270 + offsetX, 130 + offsetY);
             
-            // Breakroom Block: Old X=720 -> New X=570
+            
             case BREAKROOM: return new Point2D.Double(570 + offsetX, 130 + offsetY);
             
-            // Loading Deck: Old X=420 -> New X=270
+            
             case LOADING_DECK: return new Point2D.Double(270 + offsetX, 670 + offsetYLimitado);
             
-            // Supplier: Old X=720 -> New X=570
+            
             case SUPPLIER: return new Point2D.Double(570 + offsetX, 670 + offsetYLimitado);
             
             default: return new Point2D.Double(570 + offsetX, 410 + offsetY);
         }
     }
     
-    // Manager Position: Old X=720 -> New X=570
+    
     private Point2D getManagerPosition() {
         return new Point2D.Double(570, 290);
     }
     
-    // Inventory Position: Old X=420 -> New X=270
+    
     private Point2D getInventoryPosition() {
         return new Point2D.Double(270, 290);
     }
@@ -255,7 +255,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
         dispose();
     }
 
-    // Inner class for agent visual data
+    
     private static class AgentVisual {
         Point2D.Double currentPos;
         Point2D.Double targetPosition;
@@ -286,7 +286,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
         }
     }
 
-    // Inner class for the visualization panel
+   
     private class VisualizationPanel extends JPanel {
         
         public VisualizationPanel() {
@@ -298,54 +298,53 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
             super.paintComponent(g);
             Graphics2D g2d = (Graphics2D) g;
             
-            // Enable anti-aliasing
+        
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-            // Draw zones
+            
             drawZones(g2d);
             
-            // Draw workstation queue indicators
+            
             drawWorkstationQueues(g2d);
 
-            // Draw agents
+           
             drawAgents(g2d);
         }
 
         private void drawZones(Graphics2D g2d) {
-            // NOTA: Se restaron 150 a todas las coordenadas X para mover todo a la izquierda
-            // y compensar el nuevo panel lateral.
             
-            // Bathroom (top-left). Old X=280 -> New X=130
+            
+            
             drawZone(g2d, 130, 40, 280, 180, new Color(230, 230, 250), "BATHROOM");
             
-            // Breakroom (top-right). Old X=580 -> New X=430
+            
             drawZone(g2d, 430, 40, 280, 180, new Color(240, 255, 240), "BREAKROOM");
             
-            // Warehouse (left). Old X=280 -> New X=130
+           
             drawZone(g2d, 130, 240, 280, 340, new Color(255, 235, 205), "WAREHOUSE");
             
-            // Factory (center). Old X=580 -> New X=430
+            
             drawZone(g2d, 430, 240, 280, 340, new Color(200, 220, 255), "FACTORY");
             
-            // Loading Deck (bottom-left). Old X=280 -> New X=130
+           
             drawZone(g2d, 130, 600, 280, 140, new Color(255, 250, 205), "LOADING DECK");
             
-            // Supplier (bottom-right). Old X=580 -> New X=430
+            
             drawZone(g2d, 430, 600, 280, 140, new Color(255, 228, 225), "SUPPLIER");
         }
 
         private void drawZone(Graphics2D g2d, int x, int y, int width, int height, Color color, String label) {
-            // Fill zone
+            
             g2d.setColor(color);
             g2d.fillRoundRect(x, y, width, height, 20, 20);
             
-            // Border
+            
             g2d.setColor(color.darker());
             g2d.setStroke(new BasicStroke(3));
             g2d.drawRoundRect(x, y, width, height, 20, 20);
             
-            // Label
+            
             g2d.setColor(Color.BLACK);
             g2d.setFont(new Font("Arial", Font.BOLD, 14));
             FontMetrics fm = g2d.getFontMetrics();
@@ -354,7 +353,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
         }
 
         private void drawWorkstationQueues(Graphics2D g2d) {
-            // Count agents waiting for workstations
+            
             long waitingForWorkstation = agents.stream()
                 .filter(a -> a.getLocation() == AgentLocation.FACTORY 
                           && a.getAgentState() == AgentState.WAITING
@@ -362,7 +361,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
                 .count();
 
             if (waitingForWorkstation > 0) {
-                // Position moved to inside the NEW Factory location (Old X=600 -> New X=450)
+                
                 int queueX = 450; 
                 int queueY = 280;
 
@@ -395,14 +394,14 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
             int y = (int) pos.getY();
             int size = 24;
 
-            // Draw agent shape based on type
+            
             Color agentColor = getAgentTypeColor(agent.getAgentType());
             
-            // Shadow
+            
             g2d.setColor(new Color(0, 0, 0, 50));
             g2d.fillOval(x - size/2 + 2, y - size/2 + 2, size, size);
 
-            // Agent body
+            
             g2d.setColor(agentColor);
             
             switch (agent.getAgentType()) {
@@ -422,7 +421,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
                     break;
             }
 
-            // Border
+            
             g2d.setColor(agentColor.darker());
             g2d.setStroke(new BasicStroke(2));
             
@@ -443,21 +442,21 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
                     break;
             }
 
-            // State indicator (small circle on top-right)
+            
             Color stateColor = getStateIndicatorColor(agent.getAgentState());
             g2d.setColor(stateColor);
             g2d.fillOval(x + size/3, y - size/2, 8, 8);
             g2d.setColor(Color.BLACK);
             g2d.drawOval(x + size/3, y - size/2, 8, 8);
 
-            // Agent ID label
+            
             g2d.setColor(Color.BLACK);
             g2d.setFont(new Font("Arial", Font.PLAIN, 10));
             FontMetrics fm = g2d.getFontMetrics();
             String id = agent.getThreadID();
             int labelWidth = fm.stringWidth(id);
             
-            // Background for label
+            
             g2d.setColor(new Color(255, 255, 255, 200));
             g2d.fillRoundRect(x - labelWidth/2 - 2, y + size/2 + 2, labelWidth + 4, 12, 4, 4);
             
