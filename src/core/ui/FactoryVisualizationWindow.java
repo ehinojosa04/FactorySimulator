@@ -54,7 +54,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
         try {
             ImageIcon logoIcon = new ImageIcon("UPL.jpg");
             Image img = logoIcon.getImage();
-            Image newImg = img.getScaledInstance(200, 150,  java.awt.Image.SCALE_SMOOTH);
+            Image newImg = img.getScaledInstance(200, 150, java.awt.Image.SCALE_SMOOTH);
             JLabel logoLabel = new JLabel(new ImageIcon(newImg));
             logoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             infoPanel.add(logoLabel);
@@ -144,30 +144,30 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
     }
 
     private void updateAgentPositions() {
+        final long moveDurationMs = 2000;
+
         for (BaseAgent agent : agents) {
             AgentVisual visual = agentVisuals.get(agent.getThreadID());
             if (visual != null) {
                 Point2D targetPos;
 
                 if (agent.getAgentType() == AgentType.MANAGER &&
-                    agent.getLocation() == AgentLocation.FACTORY) {
+                        agent.getLocation() == AgentLocation.FACTORY) {
                     targetPos = getManagerPosition();
-                }
-                else if (agent.getAgentType() == AgentType.INVENTORY &&
-                         agent.getLocation() == AgentLocation.WAREHOUSE) {
+                } else if (agent.getAgentType() == AgentType.INVENTORY &&
+                        agent.getLocation() == AgentLocation.WAREHOUSE) {
                     targetPos = getInventoryPosition();
-                }
-                else {
+                } else {
                     if (!visual.currentLocation.equals(agent.getLocation())) {
                         targetPos = getLocationCenter(agent.getLocation());
-                        visual.setTargetPosition(targetPos);
+                        visual.setTargetPosition(targetPos, moveDurationMs);
                         visual.currentLocation = agent.getLocation();
                     } else {
                         targetPos = visual.targetPosition;
                     }
                 }
 
-                visual.moveTowards(targetPos, 2.0);
+                visual.updatePosition();
             }
         }
     }
@@ -178,13 +178,20 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
         double offsetYLimitado = (Math.random() - 0.5) * 80;
 
         switch (location) {
-            case FACTORY: return new Point2D.Double(570 + offsetX, 410 + offsetY);
-            case WAREHOUSE: return new Point2D.Double(270 + offsetX, 410 + offsetY);
-            case BATHROOM: return new Point2D.Double(270 + offsetX, 130 + offsetY);
-            case BREAKROOM: return new Point2D.Double(570 + offsetX, 130 + offsetY);
-            case LOADING_DECK: return new Point2D.Double(270 + offsetX, 670 + offsetYLimitado);
-            case SUPPLIER: return new Point2D.Double(570 + offsetX, 670 + offsetYLimitado);
-            default: return new Point2D.Double(570 + offsetX, 410 + offsetY);
+            case FACTORY:
+                return new Point2D.Double(570 + offsetX, 410 + offsetY);
+            case WAREHOUSE:
+                return new Point2D.Double(270 + offsetX, 410 + offsetY);
+            case BATHROOM:
+                return new Point2D.Double(270 + offsetX, 130 + offsetY);
+            case BREAKROOM:
+                return new Point2D.Double(570 + offsetX, 130 + offsetY);
+            case LOADING_DECK:
+                return new Point2D.Double(270 + offsetX, 670 + offsetYLimitado);
+            case SUPPLIER:
+                return new Point2D.Double(570 + offsetX, 670 + offsetYLimitado);
+            default:
+                return new Point2D.Double(570 + offsetX, 410 + offsetY);
         }
     }
 
@@ -198,24 +205,36 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
 
     private Color getAgentTypeColor(AgentType type) {
         switch (type) {
-            case WORKER: return new Color(70, 130, 180);
-            case MANAGER: return new Color(178, 34, 34);
-            case INVENTORY: return new Color(218, 165, 32);
-            case DELIVERY: return new Color(60, 179, 113);
-            default: return Color.GRAY;
+            case WORKER:
+                return new Color(70, 130, 180);
+            case MANAGER:
+                return new Color(178, 34, 34);
+            case INVENTORY:
+                return new Color(218, 165, 32);
+            case DELIVERY:
+                return new Color(60, 179, 113);
+            default:
+                return Color.GRAY;
         }
     }
 
     private Color getStateIndicatorColor(AgentState state) {
         switch (state) {
-            case WORKING: return Color.GREEN;
-            case WAITING: return Color.RED;
-            case MOVING: return Color.BLUE;
-            case IDLE: return Color.GRAY;
-            case ON_BREAK: return Color.ORANGE;
+            case WORKING:
+                return Color.GREEN;
+            case WAITING:
+                return Color.RED;
+            case MOVING:
+                return Color.BLUE;
+            case IDLE:
+                return Color.GRAY;
+            case ON_BREAK:
+                return Color.ORANGE;
             case ENDING_SHIFT:
-            case SHIFT_ENDED: return Color.DARK_GRAY;
-            default: return Color.BLACK;
+            case SHIFT_ENDED:
+                return Color.DARK_GRAY;
+            default:
+                return Color.BLACK;
         }
     }
 
@@ -227,30 +246,48 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
     private static class AgentVisual {
         Point2D.Double currentPos;
         Point2D.Double targetPosition;
+        Point2D.Double startPosition;
         AgentLocation currentLocation;
+
+        private long moveStartTimeMs;
+        private long moveDurationMs;
+        private boolean isMoving;
 
         AgentVisual(Point2D startPos) {
             this.currentPos = new Point2D.Double(startPos.getX(), startPos.getY());
             this.targetPosition = new Point2D.Double(startPos.getX(), startPos.getY());
+            this.startPosition = new Point2D.Double(startPos.getX(), startPos.getY());
             this.currentLocation = AgentLocation.FACTORY;
+            this.isMoving = false;
+            this.moveDurationMs = 0;
         }
 
-        void setTargetPosition(Point2D target) {
+        void setTargetPosition(Point2D target, long durationMs) {
+            this.startPosition = new Point2D.Double(currentPos.x, currentPos.y);
             this.targetPosition = new Point2D.Double(target.getX(), target.getY());
+            this.moveStartTimeMs = System.currentTimeMillis();
+            this.moveDurationMs = Math.max(durationMs, 1);
+            this.isMoving = true;
         }
 
-        void moveTowards(Point2D target, double speed) {
-            double dx = target.getX() - currentPos.x;
-            double dy = target.getY() - currentPos.y;
-            double distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance > speed) {
-                currentPos.x += (dx / distance) * speed;
-                currentPos.y += (dy / distance) * speed;
-            } else {
-                currentPos.x = target.getX();
-                currentPos.y = target.getY();
+        void updatePosition() {
+            if (!isMoving) {
+                return;
             }
+
+            long now = System.currentTimeMillis();
+            long elapsed = now - moveStartTimeMs;
+
+            double t = (double) elapsed / (double) moveDurationMs;
+            if (t >= 1.0) {
+                currentPos.x = targetPosition.x;
+                currentPos.y = targetPosition.y;
+                isMoving = false;
+                return;
+            }
+
+            currentPos.x = startPosition.x + (targetPosition.x - startPosition.x) * t;
+            currentPos.y = startPosition.y + (targetPosition.y - startPosition.y) * t;
         }
     }
 
@@ -299,28 +336,28 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
 
         private void drawAllQueues(Graphics2D g2d) {
             long waitingFactory = agents.stream()
-                .filter(a -> a.getLocation() == AgentLocation.FACTORY
-                          && a.getAgentState() == AgentState.WAITING
-                          && a.getAgentType() == AgentType.WORKER)
-                .count();
+                    .filter(a -> a.getLocation() == AgentLocation.FACTORY
+                            && a.getAgentState() == AgentState.WAITING
+                            && a.getAgentType() == AgentType.WORKER)
+                    .count();
 
             if (waitingFactory > 0) {
                 drawQueueBubble(g2d, 450, 280, waitingFactory);
             }
 
             long waitingBathroom = agents.stream()
-                .filter(a -> a.getLocation() == AgentLocation.BATHROOM
-                          && a.getAgentState() == AgentState.WAITING)
-                .count();
+                    .filter(a -> a.getLocation() == AgentLocation.BATHROOM
+                            && a.getAgentState() == AgentState.WAITING)
+                    .count();
 
             if (waitingBathroom > 0) {
                 drawQueueBubble(g2d, 150, 80, waitingBathroom);
             }
 
             long waitingBreakroom = agents.stream()
-                .filter(a -> a.getLocation() == AgentLocation.BREAKROOM
-                          && a.getAgentState() == AgentState.WAITING)
-                .count();
+                    .filter(a -> a.getLocation() == AgentLocation.BREAKROOM
+                            && a.getAgentState() == AgentState.WAITING)
+                    .count();
 
             if (waitingBreakroom > 0) {
                 drawQueueBubble(g2d, 450, 80, waitingBreakroom);
@@ -341,7 +378,7 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
             FontMetrics fm = g2d.getFontMetrics();
             int textWidth = fm.stringWidth(queueText);
 
-            g2d.drawString(queueText, x + 17 - textWidth/2, y + 24);
+            g2d.drawString(queueText, x + 17 - textWidth / 2, y + 24);
         }
 
         private void drawAgents(Graphics2D g2d) {
@@ -361,24 +398,24 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
             Color agentColor = getAgentTypeColor(agent.getAgentType());
 
             g2d.setColor(new Color(0, 0, 0, 50));
-            g2d.fillOval(x - size/2 + 2, y - size/2 + 2, size, size);
+            g2d.fillOval(x - size / 2 + 2, y - size / 2 + 2, size, size);
 
             g2d.setColor(agentColor);
 
             switch (agent.getAgentType()) {
                 case WORKER:
-                    g2d.fillOval(x - size/2, y - size/2, size, size);
+                    g2d.fillOval(x - size / 2, y - size / 2, size, size);
                     break;
                 case DELIVERY:
-                    g2d.fillRect(x - size/2, y - size/2, size, size);
+                    g2d.fillRect(x - size / 2, y - size / 2, size, size);
                     break;
                 case MANAGER:
-                    int[] xPoints = {x, x - size/2, x + size/2};
-                    int[] yPoints = {y - size/2, y + size/2, y + size/2};
+                    int[] xPoints = { x, x - size / 2, x + size / 2 };
+                    int[] yPoints = { y - size / 2, y + size / 2, y + size / 2 };
                     g2d.fillPolygon(xPoints, yPoints, 3);
                     break;
                 case INVENTORY:
-                    g2d.fillRoundRect(x - size/2, y - size/2, size, size, 8, 8);
+                    g2d.fillRoundRect(x - size / 2, y - size / 2, size, size, 8, 8);
                     break;
             }
 
@@ -387,26 +424,26 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
 
             switch (agent.getAgentType()) {
                 case WORKER:
-                    g2d.drawOval(x - size/2, y - size/2, size, size);
+                    g2d.drawOval(x - size / 2, y - size / 2, size, size);
                     break;
                 case DELIVERY:
-                    g2d.drawRect(x - size/2, y - size/2, size, size);
+                    g2d.drawRect(x - size / 2, y - size / 2, size, size);
                     break;
                 case MANAGER:
-                    int[] xPoints = {x, x - size/2, x + size/2};
-                    int[] yPoints = {y - size/2, y + size/2, y + size/2};
+                    int[] xPoints = { x, x - size / 2, x + size / 2 };
+                    int[] yPoints = { y - size / 2, y + size / 2, y + size / 2 };
                     g2d.drawPolygon(xPoints, yPoints, 3);
                     break;
                 case INVENTORY:
-                    g2d.drawRoundRect(x - size/2, y - size/2, size, size, 8, 8);
+                    g2d.drawRoundRect(x - size / 2, y - size / 2, size, size, 8, 8);
                     break;
             }
 
             Color stateColor = getStateIndicatorColor(agent.getAgentState());
             g2d.setColor(stateColor);
-            g2d.fillOval(x + size/3, y - size/2, 8, 8);
+            g2d.fillOval(x + size / 3, y - size / 2, 8, 8);
             g2d.setColor(Color.BLACK);
-            g2d.drawOval(x + size/3, y - size/2, 8, 8);
+            g2d.drawOval(x + size / 3, y - size / 2, 8, 8);
 
             g2d.setColor(Color.BLACK);
             g2d.setFont(new Font("Arial", Font.PLAIN, 10));
@@ -415,10 +452,10 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
             int labelWidth = fm.stringWidth(id);
 
             g2d.setColor(new Color(255, 255, 255, 200));
-            g2d.fillRoundRect(x - labelWidth/2 - 2, y + size/2 + 2, labelWidth + 4, 12, 4, 4);
+            g2d.fillRoundRect(x - labelWidth / 2 - 2, y + size / 2 + 2, labelWidth + 4, 12, 4, 4);
 
             g2d.setColor(Color.BLACK);
-            g2d.drawString(id, x - labelWidth/2, y + size/2 + 11);
+            g2d.drawString(id, x - labelWidth / 2, y + size / 2 + 11);
         }
     }
 }
