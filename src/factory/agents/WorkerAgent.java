@@ -174,14 +174,15 @@ public class WorkerAgent extends BaseAgent {
                         stateDescriptor = "Waiting for materials " + materialsCarried + "/" + totalMaterialsNeeded;
                         sleepTime = 1000;
                     }
-                } else if (state == AgentState.ON_BREAK) {
-                    if (!breakRequestInProgress) {
-                        breakRequestInProgress = true;
-                        System.out.println("[" + threadID + "] Requesting bathroom break through server...");
-                        bathroomConnection.requestBreak(); // connection opens here if needed
-                    }
-                    sleepTime = 200;
                 }
+                // else if (state == AgentState.ON_BREAK) {
+                //     if (!breakRequestInProgress) {
+                //         breakRequestInProgress = true;
+                //         System.out.println("[" + threadID + "] Requesting bathroom break through server...");
+                //         bathroomConnection.requestBreak(); // connection opens here if needed
+                //     }
+                //     sleepTime = 200;
+                // }
                 break;
 
             case WORKING:

@@ -5,7 +5,7 @@ import core.agents.AgentState;
 
 public class BreakRoom extends Facility {
     public BreakRoom() {
-        super(1);
+        super(10);
     }
 
     @Override
@@ -30,7 +30,7 @@ public class BreakRoom extends Facility {
         System.out.println("[" + agentId + "] Moving towards exit...");
         Thread.sleep(1000);
         System.out.println("[" + agentId + "] Moving towards " + AgentLocation.FACTORY);
-        channel.sendState(agentId, AgentState.IDLE);
         channel.sendLocation(agentId, AgentLocation.FACTORY);
+        channel.sendState(agentId, AgentState.IDLE);
     }
 }

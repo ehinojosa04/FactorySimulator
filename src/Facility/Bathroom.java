@@ -5,12 +5,12 @@ import core.agents.AgentState;
 
 public class Bathroom extends Facility {
     public Bathroom() {
-        super(1);
+        super(5);
     }
 
     @Override
     protected void onEnter(String agentId, ClientChannel channel) throws InterruptedException {
-        channel.sendLocation(agentId, AgentLocation.BATHROOM);
+        // channel.sendLocation(agentId, AgentLocation.BATHROOM);
         channel.sendState(agentId, AgentState.MOVING);
         System.out.println("[" + agentId + "] Moving to the bathroom");
         Thread.sleep(1000);
@@ -30,7 +30,7 @@ public class Bathroom extends Facility {
         System.out.println("[" + agentId + "] Moving towards exit...");
         Thread.sleep(1000);
         System.out.println("[" + agentId + "] Moving towards " + AgentLocation.FACTORY);
-        channel.sendState(agentId, AgentState.IDLE);
         channel.sendLocation(agentId, AgentLocation.FACTORY);
+        channel.sendState(agentId, AgentState.IDLE);
     }
 }
