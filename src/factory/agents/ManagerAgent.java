@@ -1,77 +1,193 @@
 package factory.agents;
 
+import core.agents.AgentState;
 import factory.Factory;
 import factory.production.ProductOrder;
 
-import Facility.Bathroom;
 import core.agents.AgentLocation;
 import core.agents.AgentType;
 import core.agents.BaseAgent;
 
 public class ManagerAgent extends BaseAgent {
     Factory factory;
-    Bathroom bathroom;
-    int orderBatchSize = 10;
+    private AgentLocation targetLocation;
 
     public ManagerAgent(Factory factory) {
-        super(AgentType.MANAGER, "Manager", AgentLocation.FACTORY);
+        super(AgentType.MANAGER, "MANAGER", AgentLocation.FACTORY);
         this.factory = factory;
-        this.bathroom = new Bathroom();
+        this.targetLocation = null;
     }
 
-    public void planProduction() {
+    @Override
+    protected void processNextState() {
+        if (state != AgentState.WORKING && !breakRequestInProgress && !hasRequestedBreak && shouldTakeBreak()) {
+            startMovingTo(random.nextBoolean() ? AgentLocation.BREAKROOM : AgentLocation.BATHROOM);
+            return;
+        }
 
+        switch (state) {
+            case MOVING:
+                if (targetLocation != null && location == targetLocation) {
+                    arriveAtDestination();
+                    targetLocation = null;
+                }
+                break;
+
+            case ON_BREAK:
+                break;
+
+            default:
+                if (factory.productOrders.peek() == null){
+                    state = AgentState.WORKING;
+                } else {
+                    state = AgentState.IDLE;
+                }
+                break;
+        }
     }
 
     @Override
     protected void performLocationBehavior() {
-        if (factory.productOrders.peek() == null){
-            for (int i = 1; i < factory.orderBatchSize; i++){
-                factory.productOrders.add(new ProductOrder(random.nextInt(factory.productsOffered)+1, random.nextInt(9)+1));
-            }
+        switch (state) {
+            case MOVING:
+                if (breakRequestInProgress) {
+                    stateDescriptor = "Server controlling movement";
+                    sleepTime = 100;
+                    return;
+                }
+                if (targetLocation != null) {
+                    stateDescriptor = "Moving to " + targetLocation;
+                    sleepTime = 2000;
+                    location = targetLocation;
+                }
+                break;
+
+            case IDLE:
+                stateDescriptor = "Supervising factory";
+                sleepTime = 2000;
+                shiftsSinceBreak++;
+                break;
+
+            case WORKING:
+                stateDescriptor = "Generating orders " + factory.orderBatchSize + " items";
+                shiftsSinceBreak += 2;
+
+                try {
+                    Thread.sleep(200L * factory.orderBatchSize);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                for (int i = 1; i < factory.orderBatchSize; i++){
+                    factory.productOrders.add(new ProductOrder(random.nextInt(factory.productsOffered)+1, random.nextInt(9)+1));
+                }
+                break;
+
+            case ON_BREAK:
+                stateDescriptor = "Taking a break in " + (location != null ? location.toString() : "transition");
+                sleepTime = 500;
+                break;
+
+            default:
+                stateDescriptor = "Manager thinking...";
+                sleepTime = 500;
+                break;
         }
     }
 
+
+    private void startMovingTo(AgentLocation destination) {
+        this.targetLocation = destination;
+        this.state = AgentState.MOVING;
+    }
+
+    private void arriveAtDestination() {
+        switch (location) {
+            case FACTORY:
+                state = AgentState.IDLE;
+                break;
+            case BREAKROOM:
+                if (!hasRequestedBreak) {
+                    hasRequestedBreak = true;
+                    breakRequestInProgress = true;
+                    System.out.println("[MANAGER] Requesting breakroom break through server...");
+                    breakroomConnection.requestBreak();
+                }
+                break;
+            case BATHROOM:
+                if (!hasRequestedBreak) {
+                    hasRequestedBreak = true;
+                    breakRequestInProgress = true;
+                    System.out.println("[MANAGER] Requesting bathroom break through server...");
+                    bathroomConnection.requestBreak();
+                }
+                break;
+        }
+    }
+
+    private boolean shouldTakeBreak() {
+        if (shiftsSinceBreak <= 5) return false;
+        return random.nextInt(100) < (shiftsSinceBreak * 2);
+    }
+
+
     private void hireWorkers() {
         System.out.println("Hiring");
-        factory.inventoryAgent = new InventoryAgent("InventoryAgent", AgentLocation.WAREHOUSE, factory.warehouse, factory.truckMaxCapacity, factory.deliveryAgents, factory.requestTime);
+        stateDescriptor = "Hiring inventory agent";
+
+        factory.inventoryAgent = new InventoryAgent("INVENTORY", AgentLocation.WAREHOUSE, factory.warehouse, factory.truckMaxCapacity, factory.deliveryAgents, factory.requestTime);
 
         for (int i = 0; i < factory.nFactoryWorkers; i++) {
-            factory.workerAgents.add(new WorkerAgent("Worker-"+i, AgentLocation.FACTORY, factory.warehouse, factory.productOrders, factory.productionTime, factory.inventoryAgent, factory.requestTime, factory.zones));
+            factory.workerAgents.add(new WorkerAgent("WORKER-"+i, AgentLocation.FACTORY, factory.warehouse, factory.productOrders, factory.productionTime, factory.inventoryAgent, factory.requestTime, factory.zones));
         }
 
         System.out.println("Hired " + factory.workerAgents.size() + " factory workers");
 
         for (int i = 0; i < factory.nDeliveryWorkers; i++) {
-            factory.deliveryAgents.add(new DeliveryAgent("Delivery-"+i, AgentLocation.LOADING_DECK, factory.warehouse, factory.truckMaxCapacity));
+            factory.deliveryAgents.add(new DeliveryAgent("DELIVERY-"+i, AgentLocation.LOADING_DECK, factory.warehouse, factory.truckMaxCapacity));
         }
         System.out.println("Hiring done");
     }
 
     private void startShift() {
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         factory.inventoryAgent.start();
 
         for (int i = 0; i < factory.workerAgents.size(); i++) {
+            stateDescriptor = "Hiring " + i + "/" +factory.nFactoryWorkers + " workers agents";
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             factory.workerAgents.get(i).start();
         }
 
         for (int i = 0; i < factory.deliveryAgents.size(); i++) {
+            stateDescriptor = "Hiring " + i + "/" +factory.nDeliveryWorkers + " delivery agents";
+            try {
+                Thread.sleep(250);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             factory.deliveryAgents.get(i).start();
         }
     }
 
     @Override
-    protected void processNextState() {
-        return;
-    }
-
-    @Override
     public void run() {
+        state = AgentState.WORKING;
         hireWorkers();
         startShift();
         System.out.println("All workers started");
 
+        state = AgentState.IDLE;
+
         super.run();
+
         System.out.println("Manager is done");
     }
 }

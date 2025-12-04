@@ -5,9 +5,10 @@ import java.net.Socket;
 
 import core.agents.AgentLocation;
 import core.agents.AgentState;
+import core.agents.BaseAgent;
 
 public abstract class FacilityConnection {
-    protected final WorkerAgent agent;
+    protected final BaseAgent agent;
     private final String host;
     private final int port;
 
@@ -18,7 +19,7 @@ public abstract class FacilityConnection {
     private Thread listenerThread;
     private volatile boolean running = false;
 
-    protected FacilityConnection(String host, int port, WorkerAgent agent) {
+    protected FacilityConnection(String host, int port, BaseAgent agent) {
         this.host = host;
         this.port = port;
         this.agent = agent;
