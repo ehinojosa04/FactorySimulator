@@ -39,7 +39,7 @@ public class BreakRoom extends Facility {
         Thread.sleep(1000);
         System.out.println("[" + agentId + "] Moving towards " + returnLocation);
         channel.sendState(agentId, AgentState.MOVING);
-        channel.sendLocation(agentId, returnLocation);
+        channel.sendLocation(agentId, AgentLocation.BREAKROOM);
 
         channel.sendEvent(agentId, "BREAK_COMPLETE");
     }

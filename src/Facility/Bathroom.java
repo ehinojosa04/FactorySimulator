@@ -37,7 +37,7 @@ public class Bathroom extends Facility {
         Thread.sleep(1000);
         System.out.println("[" + agentId + "] Moving towards " + returnLocation);
         channel.sendState(agentId, AgentState.MOVING);
-        channel.sendLocation(agentId, returnLocation);
+        channel.sendLocation(agentId, AgentLocation.BATHROOM);
         
         channel.sendEvent(agentId, "BREAK_COMPLETE");
     }

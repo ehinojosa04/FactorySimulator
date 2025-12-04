@@ -10,6 +10,7 @@ public abstract class BaseAgent extends Thread{
     protected final AgentType type;
     protected final String threadID;
     protected static final Random random = new Random();
+    protected AgentLocation targetLocation;
 
     protected AgentLocation location;
     protected AgentState state;
@@ -102,9 +103,12 @@ public abstract class BaseAgent extends Thread{
         System.out.println("[" + threadID + "] Location from server: " + newLocation);
 
         AgentLocation oldLocation = this.location;
-        this.location = newLocation;
 
-        if (newLocation == AgentLocation.FACTORY || newLocation == AgentLocation.WAREHOUSE) {
+        if (this.location == AgentLocation.BATHROOM ||  this.location == AgentLocation.BREAKROOM) {
+            this.targetLocation = newLocation;
+        } else this.location = newLocation;
+
+        if (newLocation == AgentLocation.FACTORY) {
             if (oldLocation == AgentLocation.BATHROOM) {
                 this.bathroomConnection.close();
             } else if (oldLocation == AgentLocation.BREAKROOM) {

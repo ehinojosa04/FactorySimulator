@@ -23,7 +23,6 @@ public class WorkerAgent extends BaseAgent {
     private int materialsCarried = 0;
     private int totalMaterialsNeeded = 0;
 
-    private AgentLocation targetLocation;
     private boolean holdingWorkstation;
     private int productionTime;
 
@@ -246,6 +245,7 @@ public class WorkerAgent extends BaseAgent {
                     breakroomConnection.requestBreak();
                 }
                 break;
+
             case BATHROOM:
                 if (!hasRequestedBreak) {
                     hasRequestedBreak = true;
