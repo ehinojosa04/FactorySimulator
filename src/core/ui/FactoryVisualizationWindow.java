@@ -87,7 +87,9 @@ public class FactoryVisualizationWindow extends JFrame implements Runnable {
                 "<b>Estudiantes:</b><br>" +
                 "Diego Amín Hernández Pallares<br>" +
                 "Emiliano Hinojosa Guzmán<br>" +
-                "José Salcedo Uribe" +
+                "José Salcedo Uribe<br><br>" +
+                "<b>Fecha de entrega:</b><br>" +
+                "4 de Diciembre de 2025" +
                 "</div></html>");
         
         infoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
