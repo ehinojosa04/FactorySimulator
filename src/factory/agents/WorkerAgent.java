@@ -46,7 +46,7 @@ public class WorkerAgent extends BaseAgent {
         this.targetLocation = null; // Start with no target
         this.holdingWorkstation = false;
 
-        this.bathroomConnection = new BathroomConnection("localhost", 5000, this);
+        this.bathroomConnection = new BathroomConnection("localhost", 5002, this);
         this.breakroomConnection = new BreakroomConnection("localhost", 5001, this);
     }
 
@@ -122,6 +122,11 @@ public class WorkerAgent extends BaseAgent {
                 // CRITICAL: Don't check break if we're already in a break cycle
                 if (!breakRequestInProgress && !hasRequestedBreak && shouldTakeBreak()) {
                     System.out.println(threadID + ": Needs a break. Heading to facility.");
+                    if (holdingWorkstation){
+                        zones.getWorkstations().leave();
+                        holdingWorkstation = false;
+                    }
+
                     startMovingTo(random.nextBoolean() ? AgentLocation.BREAKROOM : AgentLocation.BATHROOM);
                     return;
                 }
@@ -273,8 +278,8 @@ public class WorkerAgent extends BaseAgent {
             return false;
         }
 
-        if (shiftsSinceBreak > 5) {
-            return random.nextInt(100) < (shiftsSinceBreak * 2);
+        if (shiftsSinceBreak > 3) {
+            return random.nextInt(100) < (shiftsSinceBreak * 10);
         }
         return false;
     }

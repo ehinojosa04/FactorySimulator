@@ -13,7 +13,7 @@ import core.agents.AgentState;
 
 public class BathroomServer extends FacilityServer {
     public BathroomServer() {
-        super(FacilityType.BATHROOM, 5000);
+        super(FacilityType.BATHROOM, 5002);
     }
 
     public static void main(String[] args) throws IOException {

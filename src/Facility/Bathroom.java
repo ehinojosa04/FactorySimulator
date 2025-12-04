@@ -10,7 +10,7 @@ public class Bathroom extends Facility {
 
     @Override
     protected void onEnter(String agentId, ClientChannel channel) throws InterruptedException {
-        channel.sendState(agentId, AgentState.WAITING);
+        channel.sendState(agentId, AgentState.ON_BREAK);
         System.out.println("[" + agentId + "] Moving to the bathroom");
         Thread.sleep(1000);
     }
