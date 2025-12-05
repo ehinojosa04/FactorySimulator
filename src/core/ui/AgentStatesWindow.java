@@ -20,14 +20,12 @@ public class AgentStatesWindow extends JFrame implements Runnable {
         this.agents = agents;
 
         setTitle("Factory Simulation Monitor");
-        setSize(1000, 500); // Made it slightly wider for descriptors
+        setSize(1000, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // 1. Setup Table Data Structure
         String[] columnNames = {"Agent ID", "Type", "State", "Location", "Activity Description"};
 
-        // We make cells non-editable
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -37,14 +35,12 @@ public class AgentStatesWindow extends JFrame implements Runnable {
 
         table = new JTable(tableModel);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        table.setRowHeight(30); // Taller rows for readability
+        table.setRowHeight(30);
         table.setFillsViewportHeight(true);
         table.setGridColor(Color.LIGHT_GRAY);
 
-        // 2. Formatting & Colors
         setupTableFormatting();
 
-        // 3. Layout
         JScrollPane scrollPane = new JScrollPane(table);
         add(scrollPane, BorderLayout.CENTER);
 
@@ -59,39 +55,34 @@ public class AgentStatesWindow extends JFrame implements Runnable {
     private void setupTableFormatting() {
         TableColumnModel columnModel = table.getColumnModel();
 
-        // A. Set Column Widths
-        columnModel.getColumn(0).setPreferredWidth(100); // ID
-        columnModel.getColumn(1).setPreferredWidth(100); // Type
-        columnModel.getColumn(2).setPreferredWidth(100); // State
-        columnModel.getColumn(3).setPreferredWidth(150); // Location
-        columnModel.getColumn(4).setPreferredWidth(450); // Descriptor (Give this the most space)
+        columnModel.getColumn(0).setPreferredWidth(100);
+        columnModel.getColumn(1).setPreferredWidth(100);
+        columnModel.getColumn(2).setPreferredWidth(100);
+        columnModel.getColumn(3).setPreferredWidth(150);
+        columnModel.getColumn(4).setPreferredWidth(450);
 
-        // B. Center Align Text for ID, Type, Location
         DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         columnModel.getColumn(0).setCellRenderer(centerRenderer);
         columnModel.getColumn(1).setCellRenderer(centerRenderer);
         columnModel.getColumn(3).setCellRenderer(centerRenderer);
 
-        // C. Custom Color Renderer for STATE
         columnModel.getColumn(2).setCellRenderer(new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
-                // Center the text
                 setHorizontalAlignment(JLabel.CENTER);
                 setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-                // Color Logic based on AgentState
                 if (value != null) {
                     String stateStr = value.toString();
                     switch (stateStr) {
                         case "WORKING":
-                            c.setForeground(new Color(0, 150, 0)); // Dark Green
+                            c.setForeground(new Color(0, 150, 0));
                             break;
                         case "WAITING":
-                            c.setForeground(Color.RED); // Alert Red
+                            c.setForeground(Color.RED);
                             break;
                         case "MOVING":
                             c.setForeground(Color.BLUE);
@@ -100,7 +91,7 @@ public class AgentStatesWindow extends JFrame implements Runnable {
                             c.setForeground(Color.GRAY);
                             break;
                         case "FIXING":
-                            c.setForeground(new Color(200, 100, 0)); // Orange
+                            c.setForeground(new Color(200, 100, 0));
                             break;
                         default:
                             c.setForeground(Color.BLACK);
@@ -116,7 +107,6 @@ public class AgentStatesWindow extends JFrame implements Runnable {
         while (running) {
             try {
                 SwingUtilities.invokeLater(this::updateTable);
-                // 100ms is smoother for reading text than 50ms
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 running = false;

@@ -38,8 +38,8 @@ public abstract class BaseAgent extends Thread{
         this.sleepTime = 0;
         this.stateDescriptor = "";
 
-        this.bathroomConnection = new BathroomConnection("localhost", 5002, this);
-        this.breakroomConnection = new BreakroomConnection("localhost", 5001, this);
+        this.bathroomConnection = new BathroomConnection("10.7.4.150", 5002, this);
+        this.breakroomConnection = new BreakroomConnection("10.7.4.150", 5001, this);
 
         System.out.println("Agent "+threadID+" ("+type+"): "+" has been started");
     }
@@ -92,7 +92,6 @@ public abstract class BaseAgent extends Thread{
 
     public synchronized void updateStateFromServer(AgentState newState) {
         this.state = newState;
-        // System.out.println("[" + threadID + "] State from server: " + newState);
     }
 
     public void handleServerEvent(String eventType) {
