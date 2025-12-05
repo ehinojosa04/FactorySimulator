@@ -1,7 +1,9 @@
 package factory.agents;
 
+import core.agents.BaseAgent;
+
 public class BreakroomConnection extends FacilityConnection {
-    public BreakroomConnection(String host, int port, WorkerAgent agent) {
+    public BreakroomConnection(String host, int port, BaseAgent agent) {
         super(host, port, agent);
     }
 

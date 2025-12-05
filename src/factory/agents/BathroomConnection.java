@@ -1,7 +1,9 @@
 package factory.agents;
 
+import core.agents.BaseAgent;
+
 public class BathroomConnection extends FacilityConnection {
-    public BathroomConnection(String host, int port, WorkerAgent agent) {
+    public BathroomConnection(String host, int port, BaseAgent agent) {
         super(host, port, agent);
     }
 

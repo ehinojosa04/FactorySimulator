@@ -15,11 +15,6 @@ public class WorkerAgent extends BaseAgent {
     private final Warehouse warehouse;
     private final InventoryAgent inventoryAgent;
 
-    private final BathroomConnection bathroomConnection;
-    private final BreakroomConnection breakroomConnection;
-    private volatile boolean breakRequestInProgress = false;
-    private volatile boolean hasRequestedBreak = false;
-
     private final ZonesAPI zones;
 
     private ProductOrder currentProductOrder;
@@ -31,7 +26,6 @@ public class WorkerAgent extends BaseAgent {
     private AgentLocation targetLocation;
     private boolean holdingWorkstation;
     private int productionTime;
-    private int requestTime;
 
     private boolean materialsRequested = false;
 
@@ -44,41 +38,9 @@ public class WorkerAgent extends BaseAgent {
         this.targetLocation = null;
         this.holdingWorkstation = false;
         this.productionTime = productionTime;
-        this.requestTime = requestTime;
-
-        this.bathroomConnection = new BathroomConnection("localhost", 5002, this);
-        this.breakroomConnection = new BreakroomConnection("localhost", 5001, this);
     }
 
-    public synchronized void updateStateFromServer(AgentState newState) {
-        this.state = newState;
-        // System.out.println("[" + threadID + "] State from server: " + newState);
-    }
 
-    public synchronized void updateLocationFromServer(AgentLocation newLocation) {
-        System.out.println("[" + threadID + "] Location from server: " + newLocation);
-
-        AgentLocation oldLocation = this.location;
-        this.location = newLocation;
-
-        if (newLocation == AgentLocation.FACTORY) {
-            if (oldLocation == AgentLocation.BATHROOM) {
-                this.bathroomConnection.close();
-            } else if (oldLocation == AgentLocation.BREAKROOM) {
-                this.breakroomConnection.close();
-            }
-
-            // When returning, we go to IDLE to let processNextState decide the next move
-            state = AgentState.IDLE;
-            breakRequestInProgress = false;
-            hasRequestedBreak = false;
-            shiftsSinceBreak = 0;
-        }
-    }
-
-    public void handleServerEvent(String eventType) {
-        System.out.println("[" + threadID + "] Facility event: " + eventType);
-    }
 
     @Override
     protected void processNextState() {

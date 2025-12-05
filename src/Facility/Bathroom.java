@@ -24,12 +24,20 @@ public class Bathroom extends Facility {
 
     @Override
     protected void onExit(String agentId, ClientChannel channel) throws InterruptedException {
-        // channel.sendState(agentId, AgentState.MOVING);
+        AgentLocation returnLocation = null;
+
+        switch (agentId.split("-")[0]) {
+            case "WORKER", "MANAGER" -> returnLocation = AgentLocation.FACTORY;
+            case "INVENTORY" -> returnLocation = AgentLocation.WAREHOUSE;
+            case "DELIVERY" -> returnLocation = AgentLocation.LOADING_DECK;
+            default -> returnLocation = AgentLocation.FACTORY;
+        }
+
         System.out.println("[" + agentId + "] Moving towards exit...");
         Thread.sleep(1000);
-        System.out.println("[" + agentId + "] Moving towards " + AgentLocation.FACTORY);
-        channel.sendState(agentId, AgentState.IDLE);
-        channel.sendLocation(agentId, AgentLocation.FACTORY);
+        System.out.println("[" + agentId + "] Moving towards " + returnLocation);
+        channel.sendState(agentId, AgentState.MOVING);
+        channel.sendLocation(agentId, returnLocation);
         
         channel.sendEvent(agentId, "BREAK_COMPLETE");
     }
