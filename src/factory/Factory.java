@@ -22,10 +22,11 @@ public class Factory {
     public LinkedList<ProductOrder> productOrders;
     public ZonesAPI zones;
     public int orderBatchSize, productsOffered, truckMaxCapacity;
-    public int transportTime, productionTime, requestTime;
+    public int transportTime, productionTime, requestTime, nWorkstation;
 
     public Factory(int nWorkstation, int orderBatchSize, int productsOffered, int productionTime, int nFactoryWorkers, int truckMaxCapacity, int transportTime, int nDeliveryWorkers, int requestTime, ZonesAPI zones) {
         this.zones = zones;
+        this.nWorkstation = nWorkstation;
         warehouse = new Warehouse();
         zones.setWorkstations(new Workstations(nWorkstation));
         productOrders = new LinkedList<>();

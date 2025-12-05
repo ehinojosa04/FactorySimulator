@@ -24,7 +24,7 @@ public class FactoryServer {
 
         new Thread(new AgentStatesWindow(agents)).start();
         new Thread(new ThreadStatesWindow(agents)).start();
-        new Thread(new ZonesWindow(agents)).start();
+        new Thread(new ZonesWindow(agents, factory)).start();
         new Thread(new FactoryVisualizationWindow(agents)).start();
     }
 }

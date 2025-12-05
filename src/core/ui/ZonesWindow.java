@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import core.agents.BaseAgent;
 import core.agents.AgentType;
 import core.agents.AgentLocation;
+import factory.Factory;
 
 public class ZonesWindow extends JFrame implements Runnable {
 
@@ -17,8 +18,10 @@ public class ZonesWindow extends JFrame implements Runnable {
     private final JTextArea locationArea;
 
     private volatile boolean running = true;
+    Factory factory;
 
-    public ZonesWindow(List<BaseAgent> agents) {
+    public ZonesWindow(List<BaseAgent> agents, Factory factory) {
+        this.factory = factory;
         this.agents = agents;
 
         setTitle("General Overview Dashboard");
@@ -52,7 +55,7 @@ public class ZonesWindow extends JFrame implements Runnable {
         while (running) {
             try {
                 SwingUtilities.invokeLater(this::updateDashboard);
-                Thread.sleep(1000);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 running = false;
                 break;
@@ -79,6 +82,10 @@ public class ZonesWindow extends JFrame implements Runnable {
             long count = byLocation.getOrDefault(loc, 0L);
             sbLocations.append(String.format(" • %-15s : %d%n", loc, count));
         }
+
+        sbLocations.append(String.format(" • %-15s : %d%n", "Workstations", factory.zones.getWorkstations() == null ? 0 : factory.nWorkstation - factory.zones.getWorkstations().getAvailableSlots()));
+
+
 
         typeArea.setText(sbTypes.toString());
         locationArea.setText(sbLocations.toString());

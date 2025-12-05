@@ -30,7 +30,7 @@ public class FactoryLauncher {
 
             JTextField workstationCpctyTF = createField(panel, "Workstation agent capacity:", "2");
 
-            JTextField transportTimeTF = createField(panel, "Time for transportation (ms):", "10000");
+            JTextField transportTimeTF = createField(panel, "Time to start driving (ms):", "10000");
             JTextField timeToProduceTF = createField(panel, "Time to produce an item (ms):", "500");
             JTextField timeToRequestMaterialsTF = createField(panel, "Time to request materials (ms):", "500");
 
